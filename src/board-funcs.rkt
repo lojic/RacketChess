@@ -4,6 +4,8 @@
 (require "./piece.rkt")
 (require "./move.rkt")
 
+(require racket/performance-hint)
+
 (provide evaluate
          make-move!
          print-board
@@ -18,11 +20,49 @@
 (define (evaluate b)
   (for*/sum ([ rank (in-range 8) ]
              [ file (in-range 8) ])
-    (let* ([ idx   (+ 21 file (* rank 10))                ]
+    (let* ([ idx   (file-rank->idx file rank)        ]
            [ piece (bytes-ref (board-squares b) idx) ])
       (cond [ (is-pawn? piece)  (evaluate-pawn b piece idx) ]
             [ (is-piece? piece) (piece-value piece)         ]
             [ else              0.0                         ]))))
+
+(define (fen b)
+  (string-join (for/list ([ rank (in-range 8) ])
+                 (fen-row b rank))
+               "/"))
+
+(define (fen-row b rank)
+  (let loop ([ result "" ][ file 0 ][ blanks 0 ])
+    (if (> file 7)
+        (string-append result (if (> blanks 0)
+                                  (number->string blanks)
+                                  ""))
+        (let* ([ idx   (file-rank->idx file rank)        ]
+               [ piece (bytes-ref (board-squares b) idx) ])
+          (if (is-piece? piece)
+              (loop (string-append result (piece-symbol piece))
+                    (add1 file)
+                    blanks)
+              (loop result
+                    (add1 file)
+                    (add1 blanks)))))))
+
+(define-inline (file-rank->idx file rank)
+  (+ 21 file (* rank 10)))
+
+;; Return a list of all pieces on the board with their file & rank.
+(define (get-pieces-file-rank b)
+  (define squares (board-squares b))
+
+  (for*/fold ([ result '() ])
+             ([ rank (in-range 8) ]
+              [ file (in-range 8) ])
+    (let* ([ idx   (file-rank->idx file rank)        ]
+           [ pos   (idx->pos idx)                    ]
+           [ piece (bytes-ref (board-squares b) idx) ])
+      (if (is-piece? piece)
+          (cons (list piece (string-ref pos 0) (string-ref pos 1)) result)
+          result))))
 
 ;; Not sure if this is a good idea, but give the 4 center positions
 ;; higher value to encourage controlling the center.
@@ -153,7 +193,7 @@
   (when full
     (printf "Depth: ~a. " (board-depth b))
     (when (> (board-ep-idx b) 0)
-      (printf "EP Square: ~a. " (pos-from-idx (board-ep-idx b)))))
+      (printf "EP Square: ~a. " (idx->pos (board-ep-idx b)))))
 
   (printf "\n"))
 
@@ -186,8 +226,8 @@
 (define (run)
   (let* ([ b (create-board) ]
          [ squares (board-squares b) ]
-         [ src-idx (idx-from-pos "e2") ]
-         [ dst-idx (idx-from-pos "e4") ]
+         [ src-idx (pos->idx "e2") ]
+         [ dst-idx (pos->idx "e4") ]
          [ src (bytes-ref squares src-idx) ]
          [ m (create-move src src-idx dst-idx) ])
     (print-board b #:full #t)
@@ -200,12 +240,67 @@
 (module+ test
   (require rackunit)
 
+  ;; ------------------------------------------------------------------------------------------
   ;; evaluate
+  ;; ------------------------------------------------------------------------------------------
   (let ([ b (create-board) ])
     (check-within (evaluate b) 0.0 0.00001)
     ;; Remove the White Queen
     (bytes-set! (board-squares b) 94 empty-square)
     (check-within (evaluate b) -9.0 0.00001))
 
+  ;; ------------------------------------------------------------------------------------------
+  ;; fen
+  ;; ------------------------------------------------------------------------------------------
+
+  (let ([ b (create-board) ])
+    (check-equal? (fen-row b 0) "rnbqkbnr")
+    (check-equal? (fen-row b 1) "pppppppp")
+    (check-equal? (fen-row b 2) "8")
+    (check-equal? (fen-row b 3) "8")
+    (check-equal? (fen-row b 4) "8")
+    (check-equal? (fen-row b 5) "8")
+    (check-equal? (fen-row b 6) "PPPPPPPP")
+    (check-equal? (fen-row b 7) "RNBQKBNR")
+    (check-equal? (fen b) "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"))
+
+  ;; ------------------------------------------------------------------------------------------
+  ;; get-pieces-file-rank
+  ;; ------------------------------------------------------------------------------------------
+  (let* ([ b      (create-board)           ]
+         [ pieces (get-pieces-file-rank b) ])
+    (for ([ tuple (in-list (list (list white-rook #\a #\1)
+                                 (list white-knight #\b #\1)
+                                 (list white-bishop #\c #\1)
+                                 (list white-queen #\d #\1)
+                                 (list white-king #\e #\1)
+                                 (list white-bishop #\f #\1)
+                                 (list white-knight #\g #\1)
+                                 (list white-rook #\h #\1)
+                                 (list white-pawn #\a #\2)
+                                 (list white-pawn #\b #\2)
+                                 (list white-pawn #\c #\2)
+                                 (list white-pawn #\d #\2)
+                                 (list white-pawn #\e #\2)
+                                 (list white-pawn #\f #\2)
+                                 (list white-pawn #\g #\2)
+                                 (list white-pawn #\h #\2)
+                                 (list black-pawn #\a #\7)
+                                 (list black-pawn #\b #\7)
+                                 (list black-pawn #\c #\7)
+                                 (list black-pawn #\d #\7)
+                                 (list black-pawn #\e #\7)
+                                 (list black-pawn #\f #\7)
+                                 (list black-pawn #\g #\7)
+                                 (list black-pawn #\h #\7)
+                                 (list black-rook #\a #\8)
+                                 (list black-knight #\b #\8)
+                                 (list black-bishop #\c #\8)
+                                 (list black-queen #\d #\8)
+                                 (list black-king #\e #\8)
+                                 (list black-bishop #\f #\8)
+                                 (list black-knight #\g #\8)
+                                 (list black-rook #\h #\8))) ])
+      (check-not-false (member tuple pieces))))
 
   )
