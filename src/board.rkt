@@ -1,9 +1,9 @@
 #lang racket
 
 (provide create-board
-         idx-from-pos
+         pos->idx
          init-moves
-         pos-from-idx
+         idx->pos
          (struct-out board))
 
 ;; 10x12 Board Representation
@@ -34,19 +34,20 @@
         #:transparent #:mutable)
 
 (define initial-squares
-  (bytes
-   #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF
-   #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF
-   #xFF #x44 #x42 #x43 #x45 #x46 #x43 #x42 #x44 #xFF
-   #xFF #x41 #x41 #x41 #x41 #x41 #x41 #x41 #x41 #xFF
-   #xFF #x00 #x00 #x00 #x00 #x00 #x00 #x00 #x00 #xFF
-   #xFF #x00 #x00 #x00 #x00 #x00 #x00 #x00 #x00 #xFF
-   #xFF #x00 #x00 #x00 #x00 #x00 #x00 #x00 #x00 #xFF
-   #xFF #x00 #x00 #x00 #x00 #x00 #x00 #x00 #x00 #xFF
-   #xFF #x81 #x81 #x81 #x81 #x81 #x81 #x81 #x81 #xFF
-   #xFF #x84 #x82 #x83 #x85 #x86 #x83 #x82 #x84 #xFF
-   #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF
-   #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF))
+  (bytes->immutable-bytes
+   (bytes
+    #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF
+    #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF
+    #xFF #x44 #x42 #x43 #x45 #x46 #x43 #x42 #x44 #xFF
+    #xFF #x41 #x41 #x41 #x41 #x41 #x41 #x41 #x41 #xFF
+    #xFF #x00 #x00 #x00 #x00 #x00 #x00 #x00 #x00 #xFF
+    #xFF #x00 #x00 #x00 #x00 #x00 #x00 #x00 #x00 #xFF
+    #xFF #x00 #x00 #x00 #x00 #x00 #x00 #x00 #x00 #xFF
+    #xFF #x00 #x00 #x00 #x00 #x00 #x00 #x00 #x00 #xFF
+    #xFF #x81 #x81 #x81 #x81 #x81 #x81 #x81 #x81 #xFF
+    #xFF #x84 #x82 #x83 #x85 #x86 #x83 #x82 #x84 #xFF
+    #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF
+    #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF)))
 
 (define positions
   (vector-immutable
@@ -69,7 +70,7 @@
 (define (create-board)
   (let ([ b (board
              0
-             initial-squares
+             (bytes-copy initial-squares)
              #t
              0
              (make-vector max-depth)
@@ -89,18 +90,20 @@
     (vector-set! (board-quiet-head b) d -1)
     (vector-set! (board-tactical-head b) d -1)))
 
-(define (idx-from-pos pos)
+(define (pos->idx pos)
   (vector-member pos positions))
 
-(define (pos-from-idx idx)
+(define (idx->pos idx)
   (vector-ref positions idx))
 
 (module+ test
   (require rackunit)
 
-  ;; idx-from-pos / pos-from-idx
+  ;; ------------------------------------------------------------------------------------------
+  ;; pos->idx / idx->pos
+  ;; ------------------------------------------------------------------------------------------
   (for ([ pair (in-list '(("a8" 21) ("h8" 28) ("a8" 21) ("a1" 91) ("h1" 98))) ])
-    (check-equal? (idx-from-pos (first pair)) (second pair))
-    (check-equal? (pos-from-idx (second pair)) (first pair)))
+    (check-equal? (pos->idx (first pair)) (second pair))
+    (check-equal? (idx->pos (second pair)) (first pair)))
 
   )
