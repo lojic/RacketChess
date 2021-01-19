@@ -3,7 +3,9 @@
 (require racket/performance-hint)
 
 (provide black-bishop
+         black-king
          black-knight
+         black-pawn
          black-queen
          black-rook
          empty-square
@@ -22,7 +24,9 @@
          piece-type
          piece-value
          white-bishop
+         white-king
          white-knight
+         white-pawn
          white-queen
          white-rook)
 
