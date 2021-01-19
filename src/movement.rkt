@@ -142,11 +142,11 @@
 (define (print-move m)
   (printf "~a~a~a~a\n"
           (piece-symbol (move-src m))
-          (pos-from-idx (move-src-idx m))
+          (idx->pos (move-src-idx m))
           (if (move-captured-piece m)
               "x"
               "-")
-          (pos-from-idx (move-dst-idx m))
+          (idx->pos (move-dst-idx m))
           ))
 
 (define (print-moves b)
