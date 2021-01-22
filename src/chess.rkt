@@ -4,8 +4,8 @@
 (require "./board.rkt")
 (require "./move.rkt")
 (require "./movement.rkt")
+(require "./pgn.rkt")
 (require "./piece.rkt")
-(require "./san.rkt")
 
 (define (search b max-level)
   (set-board-depth! b 0)
@@ -61,12 +61,12 @@
   (define b (create-board))
 
   (when file-path
-    (san-load-file b file-path)
+    (pgn-load-file b file-path)
     (print-board b #:full #t))
 
   (when computer-plays-black?
     (display "Enter move: ")
-    (make-move! b (san-move b (read-line)))
+    (make-move! b (pgn-move b (read-line)))
     (print-board b #:full #t))
 
   (let loop ()
@@ -83,7 +83,7 @@
             (displayln "")
             (display "Enter move: ")
             (displayln "")
-            (make-move! b (san-move b (read-line)))
+            (make-move! b (pgn-move b (read-line)))
             (print-board b #:full #t)
             (loop))
           (printf "No move!\n")))))

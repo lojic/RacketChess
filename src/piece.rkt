@@ -10,6 +10,8 @@
          black-rook
          empty-square
          has-moved?
+         is-black?
+         is-black-king?
          is-king?
          is-other-color?
          is-other-piece?
@@ -17,12 +19,15 @@
          is-pawn?
          is-piece?
          is-right-color-piece?
+         is-rook?
          is-white?
+         is-white-king?
          king-castled-bit
          piece-moved-bit
          piece-symbol
          piece-type
          piece-value
+         symbol-piece
          white-bishop
          white-king
          white-knight
@@ -81,22 +86,34 @@
 
 (define empty-square #b00000000)
 
-(define piece-symbols (hash empty-square " "
-                            white-pawn   "P"
-                            white-knight "N"
-                            white-bishop "B"
-                            white-rook   "R"
-                            white-queen  "Q"
-                            white-king   "K"
-                            black-pawn   "p"
-                            black-knight "n"
-                            black-bishop "b"
-                            black-rook   "r"
-                            black-queen  "q"
-                            black-king   "k"))
+(define piece-symbol-alist (list (cons white-pawn    "P")
+                                 (cons white-knight  "N")
+                                 (cons white-bishop  "B")
+                                 (cons white-rook    "R")
+                                 (cons white-queen   "Q")
+                                 (cons white-king    "K")
+                                 (cons black-pawn    "p")
+                                 (cons black-knight  "n")
+                                 (cons black-bishop  "b")
+                                 (cons black-rook    "r")
+                                 (cons black-queen   "q")
+                                 (cons black-king    "k")))
+
+(define piece-symbols (make-immutable-hash (cons (cons empty-square " ") piece-symbol-alist)))
+
+(define symbol-pieces
+  (for/hash ([ pair (in-list piece-symbol-alist) ])
+    (values (cdr pair) (car pair))))
 
 (define-inline (has-moved? piece)
   (> (bitwise-and piece piece-moved-bit) #b0))
+
+(define-inline (is-black? piece)
+  (> (bitwise-and piece black-bit) #b0))
+
+(define-inline (is-black-king? piece)
+  (and (is-black? piece)
+       (is-king? piece)))
 
 (define-inline (is-king? piece)
   (= (bitwise-and piece piece-type-bits) king-bits))
@@ -126,8 +143,15 @@
 (define-inline (is-right-color-piece? piece is-white?)
   (> (bitwise-and piece (if is-white? white-bit black-bit)) #b0))
 
+(define-inline (is-rook? piece)
+  (= (bitwise-and piece piece-type-bits) rook-bits))
+
 (define-inline (is-white? piece)
   (> (bitwise-and piece white-bit) #b0))
+
+(define-inline (is-white-king? piece)
+  (and (is-white? piece)
+       (is-king? piece)))
 
 (define (piece-symbol piece)
   (hash-ref piece-symbols
@@ -147,6 +171,9 @@
     (if (is-white? piece)
         val
         (- val))))
+
+(define (symbol-piece sym)
+  (hash-ref symbol-pieces sym))
 
 (module+ test
   (require rackunit)

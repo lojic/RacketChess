@@ -1,6 +1,9 @@
 #lang racket
 
+(require racket/performance-hint)
+
 (provide create-board
+         file-rank->idx
          pos->idx
          init-moves
          idx->pos
@@ -26,6 +29,7 @@
 (struct board (depth
                squares
                whites-move?
+               full-move
                ep-idx
                quiet-moves
                quiet-head
@@ -38,14 +42,14 @@
    (bytes
     #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF
     #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF
-    #xFF #x44 #x42 #x43 #x45 #x46 #x43 #x42 #x44 #xFF
-    #xFF #x41 #x41 #x41 #x41 #x41 #x41 #x41 #x41 #xFF
     #xFF #x00 #x00 #x00 #x00 #x00 #x00 #x00 #x00 #xFF
     #xFF #x00 #x00 #x00 #x00 #x00 #x00 #x00 #x00 #xFF
     #xFF #x00 #x00 #x00 #x00 #x00 #x00 #x00 #x00 #xFF
     #xFF #x00 #x00 #x00 #x00 #x00 #x00 #x00 #x00 #xFF
-    #xFF #x81 #x81 #x81 #x81 #x81 #x81 #x81 #x81 #xFF
-    #xFF #x84 #x82 #x83 #x85 #x86 #x83 #x82 #x84 #xFF
+    #xFF #x00 #x00 #x00 #x00 #x00 #x00 #x00 #x00 #xFF
+    #xFF #x00 #x00 #x00 #x00 #x00 #x00 #x00 #x00 #xFF
+    #xFF #x00 #x00 #x00 #x00 #x00 #x00 #x00 #x00 #xFF
+    #xFF #x00 #x00 #x00 #x00 #x00 #x00 #x00 #x00 #xFF
     #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF
     #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF)))
 
@@ -69,14 +73,15 @@
 
 (define (create-board)
   (let ([ b (board
-             0
-             (bytes-copy initial-squares)
-             #t
-             0
-             (make-vector max-depth)
-             (make-vector max-depth)
-             (make-vector max-depth)
-             (make-vector max-depth)) ])
+             0                             ; depth
+             (bytes-copy initial-squares)  ; squares
+             #t                            ; whites-move?
+             1                             ; full-move
+             0                             ; ep-idx
+             (make-vector max-depth)       ; quiet-moves
+             (make-vector max-depth)       ; quiet-head
+             (make-vector max-depth)       ; tactical-moves
+             (make-vector max-depth)) ])   ; tactical-head
     (for ([ i (in-range max-depth) ])
       (vector-set! (board-quiet-head b) i -1)
       (vector-set! (board-quiet-moves b) i (make-vector max-moves))
@@ -89,6 +94,9 @@
   (let ([ d (board-depth b) ])
     (vector-set! (board-quiet-head b) d -1)
     (vector-set! (board-tactical-head b) d -1)))
+
+(define-inline (file-rank->idx file rank)
+  (+ 21 file (* rank 10)))
 
 (define (pos->idx pos)
   (vector-member pos positions))
