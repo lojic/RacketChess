@@ -11,7 +11,7 @@
 (require debug/repl)
 
 (provide make-pgn-move!
-         pgn-load-file
+         pgn-load-file!
          pgn-move)
 
 ;; Groups for pat-pawn:
@@ -36,7 +36,7 @@
 ;; 3 - Check indication
 (define pat-castle #px"^(O-O|O-O-O)([+]|#)?$")
 
-(define (pgn-load-file b path)
+(define (pgn-load-file! b path)
   (printf "Loading file: ~a\n" path)
   (for ([ line (in-list (file->lines path)) ])
     (printf "~a\n" line)
@@ -214,12 +214,12 @@
 ;; vectors on the board, and then extract the information from them.
 (define (targets b piece file rank)
   (let ([ idx (pos->idx (format "~a~a" file rank)) ])
-    (init-moves b)
-    (cond [ (is-king? piece)   (generate-king-moves b idx piece)   ]
-          [ (is-queen? piece)  (generate-queen-moves b idx piece)  ]
-          [ (is-rook? piece)   (generate-rook-moves b idx piece)   ]
-          [ (is-bishop? piece) (generate-bishop-moves b idx piece) ]
-          [ (is-knight? piece) (generate-knight-moves b idx piece) ]
+    (init-moves! b)
+    (cond [ (is-king? piece)   (generate-king-moves! b idx piece)   ]
+          [ (is-queen? piece)  (generate-queen-moves! b idx piece)  ]
+          [ (is-rook? piece)   (generate-rook-moves! b idx piece)   ]
+          [ (is-bishop? piece) (generate-bishop-moves! b idx piece) ]
+          [ (is-knight? piece) (generate-knight-moves! b idx piece) ]
           [ else               (error "targets: invalid piece")    ])
     (let* ([ qhead   (quiet-head b)     ]
            [ qmoves  (quiet-moves b)    ]
@@ -229,7 +229,7 @@
                                (idx->pos (move-dst-idx (vector-ref qmoves i))))
                              (for/list ([ i (in-range (add1 thead)) ])
                                (idx->pos (move-dst-idx (vector-ref tmoves i))))) ])
-      (init-moves b)
+      (init-moves! b)
       targets)))
 
 ;; Groups:

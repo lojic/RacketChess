@@ -5,7 +5,7 @@
 (provide create-board
          file-rank->idx
          pos->idx
-         init-moves
+         init-moves!
          idx->pos
          (struct-out board))
 
@@ -90,7 +90,7 @@
 
     b))
 
-(define (init-moves b)
+(define (init-moves! b)
   (let ([ d (board-depth b) ])
     (vector-set! (board-quiet-head b) d -1)
     (vector-set! (board-tactical-head b) d -1)))

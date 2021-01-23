@@ -9,10 +9,10 @@
 
 (define (search b max-level)
   (set-board-depth! b 0)
-  (alpha-beta b max-level -inf.0 +inf.0))
+  (alpha-beta! b max-level -inf.0 +inf.0))
 
-(define (move-iterator b)
-  (generate-moves b)
+(define (move-iterator! b)
+  (generate-moves! b)
   (let ([ tmoves (tactical-moves b) ]
         [ thead  (tactical-head b)  ]
         [ ti     0                  ]
@@ -28,12 +28,12 @@
               (vector-ref qmoves (sub1 qi)) ]
             [ else #f ]))))
 
-(define (alpha-beta b max-level alpha beta)
+(define (alpha-beta! b max-level alpha beta)
   (define depth (board-depth b))
   (if (= depth max-level)
       (evaluate b)
       (let ([ maximizing (board-whites-move? b) ]
-            [ get-move (move-iterator b) ])
+            [ get-move (move-iterator! b) ])
         (let loop ([ alpha alpha ]
                    [ beta  beta  ]
                    [ move  #f    ])
@@ -47,7 +47,7 @@
                     (if (= depth 0) (cons beta move)  beta))
                 (begin
                   (make-move! b m)
-                  (let ([ score (alpha-beta b max-level alpha beta) ])
+                  (let ([ score (alpha-beta! b max-level alpha beta) ])
                     (unmake-move! b m)
                     (if maximizing
                         (if (> score alpha)
@@ -61,7 +61,7 @@
   (define b (create-board))
 
   (when file-path
-    (pgn-load-file b file-path)
+    (pgn-load-file! b file-path)
     (print-board b #:full #t))
 
   (when computer-plays-black?

@@ -21,8 +21,8 @@
              [ file (in-range 8) ])
     (let* ([ idx   (file-rank->idx file rank)        ]
            [ piece (bytes-ref (board-squares b) idx) ])
-      (cond [ (is-piece? piece) (piece-value piece)         ]
-            [ else              0.0                         ]))))
+      (cond [ (is-piece? piece) (piece-value piece) ]
+            [ else              0.0                 ]))))
 
 (define (make-move! b m)
   ;; Reset en passant capture idx (we may set it below if double push)
