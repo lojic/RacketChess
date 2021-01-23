@@ -10,14 +10,17 @@
          black-rook
          empty-square
          has-moved?
+         is-bishop?
          is-black?
          is-black-king?
          is-king?
+         is-knight?
          is-other-color?
          is-other-piece?
          is-own-piece?
          is-pawn?
          is-piece?
+         is-queen?
          is-right-color-piece?
          is-rook?
          is-white?
@@ -108,6 +111,9 @@
 (define-inline (has-moved? piece)
   (> (bitwise-and piece piece-moved-bit) #b0))
 
+(define-inline (is-bishop? piece)
+  (= (bitwise-and piece piece-type-bits) bishop-bits))
+
 (define-inline (is-black? piece)
   (> (bitwise-and piece black-bit) #b0))
 
@@ -117,6 +123,9 @@
 
 (define-inline (is-king? piece)
   (= (bitwise-and piece piece-type-bits) king-bits))
+
+(define-inline (is-knight? piece)
+  (= (bitwise-and piece piece-type-bits) knight-bits))
 
 (define-inline (is-other-color? p1 p2)
   (= (bitwise-ior (bitwise-and p1 color-bits)
@@ -139,6 +148,9 @@
 
 (define-inline (is-piece? piece)
   (> (bitwise-and piece piece-type-bits) #b0))
+
+(define-inline (is-queen? piece)
+  (= (bitwise-and piece piece-type-bits) queen-bits))
 
 (define-inline (is-right-color-piece? piece is-white?)
   (> (bitwise-and piece (if is-white? white-bit black-bit)) #b0))

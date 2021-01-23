@@ -13,7 +13,12 @@
 (define (get-black-king-file-rank b)
   (car (get-pieces-file-rank b is-black-king?)))
 
-;; Return a list of all pieces on the board with their file & rank.
+;; Return a list of all pieces on the board in the following form:
+;; ( (piece file rank)
+;;   (piece file rank)
+;;   ... )
+;;
+;; Where file & rank are characters e.g. #\c & #\4
 (define (get-pieces-file-rank b [ pred? is-piece? ])
   (define squares (board-squares b))
 

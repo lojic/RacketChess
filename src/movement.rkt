@@ -5,7 +5,12 @@
 (require "./move.rkt")
 (require "./piece.rkt")
 
-(provide generate-moves
+(provide generate-bishop-moves
+         generate-king-moves
+         generate-knight-moves
+         generate-queen-moves
+         generate-rook-moves
+         generate-moves
          print-move)
 
 (define (add-quiet-move b m)
