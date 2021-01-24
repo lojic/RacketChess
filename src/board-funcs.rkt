@@ -55,6 +55,11 @@
                  (set! src (move-promoted-piece m)) ])) ]
 
           [ (is-king? src)
+            ;; Update king idx
+            (if (is-white? src)
+                (set-board-white-king-idx! b dst-idx)
+                (set-board-black-king-idx! b dst-idx))
+
             ;; Handle castling
             (let ([ dist (- dst-idx src-idx) ])
               (cond [ (= dist (* 2 east))
@@ -118,15 +123,21 @@
           [ else
             (bytes-set! squares dst-idx (move-captured-piece m)) ])
 
-    ;; Handle un-castling
-    (cond [ (move-is-castle-kingside? m)
-            ;; Move rook back
-            (bytes-set! squares (+ src-idx (* 3 east)) (bytes-ref squares (+ src-idx east)))
-            (bytes-set! squares (+ src-idx east) empty-square) ]
-          [ (move-is-castle-queenside? m)
-            ;; Move rook back
-            (bytes-set! squares (+ src-idx (* 4 west)) (bytes-ref squares (+ src-idx west)))
-            (bytes-set! squares (+ src-idx west) empty-square) ])
+    (when (is-king? dst)
+      ;; Revert king idx
+      (if (is-white? dst)
+          (set-board-white-king-idx! b src-idx)
+          (set-board-black-king-idx! b src-idx))
+
+      ;; Handle un-castling
+      (cond [ (move-is-castle-kingside? m)
+              ;; Move rook back
+              (bytes-set! squares (+ src-idx (* 3 east)) (bytes-ref squares (+ src-idx east)))
+              (bytes-set! squares (+ src-idx east) empty-square) ]
+            [ (move-is-castle-queenside? m)
+              ;; Move rook back
+              (bytes-set! squares (+ src-idx (* 4 west)) (bytes-ref squares (+ src-idx west)))
+              (bytes-set! squares (+ src-idx west) empty-square) ]))
 
     ;; Reset player to move an depth
     (set-board-whites-move?! b (not (board-whites-move? b)))
@@ -148,7 +159,10 @@
   (when full
     (printf "Depth: ~a. " (board-depth b))
     (when (> (board-ep-idx b) 0)
-      (printf "EP Square: ~a. " (idx->pos (board-ep-idx b)))))
+      (printf "EP Square: ~a. " (idx->pos (board-ep-idx b))))
+    (printf "White king pos: ~a, Black king pos: ~a\n"
+            (idx->pos (board-white-king-idx b))
+            (idx->pos (board-black-king-idx b))))
 
   (printf "\n"))
 

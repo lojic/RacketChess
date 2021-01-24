@@ -29,6 +29,8 @@
 (struct board (depth
                squares
                whites-move?
+               black-king-idx
+               white-king-idx
                full-move
                ep-idx
                quiet-moves
@@ -76,6 +78,8 @@
              0                             ; depth
              (bytes-copy initial-squares)  ; squares
              #t                            ; whites-move?
+             25                            ; black-king-idx
+             95                            ; white-king-idx
              1                             ; full-move
              0                             ; ep-idx
              (make-vector max-depth)       ; quiet-moves
