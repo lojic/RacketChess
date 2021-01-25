@@ -2,6 +2,7 @@
 
 (module+ test
   (require "./board.rkt")
+  (require "./board-funcs.rkt")
   (require "./fen.rkt")
   (require "./pgn.rkt")
 
@@ -21,4 +22,5 @@
                          "Rxa2" "f4" "g4" "Rd5" "Re4" "Rd7" "Rxf4")) ])
       (make-pgn-move! b m))
     (check-equal? (board->fen b) "8/2pR1p2/1pP3kp/p7/5rp1/2P5/r3NKPP/5B1R w - - 0 34"))
+
   )

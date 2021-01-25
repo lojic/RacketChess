@@ -101,7 +101,7 @@
         ;; En passant capture
         (let* ([ cap-idx   (pos->idx (format "~a~a" to-file src-rank)) ]
                [ cap-piece (bytes-ref squares cap-idx)                 ])
-          (create-move src src-idx dst-idx #:captured-piece cap-piece #:is-ep-capture #t))
+          (create-move src src-idx dst-idx #:captured-piece cap-piece #:is-ep-capture? #t))
         ;; Regular capture
         (create-move src src-idx dst-idx #:captured-piece dst))))
 

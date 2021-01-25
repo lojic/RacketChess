@@ -133,7 +133,7 @@
 (define (fen->board-ep-target! b ep-target)
   (when (not (string=? ep-target "-"))
     (if (regexp-match? #px"^[a-h][0-9]$" ep-target)
-        (set-board-ep-idx! b (pos->idx ep-target))
+        (set-ep-idx! b (pos->idx ep-target))
         (error "fen->board-ep-target!: invalid ep target"))))
 
 (define (fen->board-half-move! b half-move)
@@ -233,7 +233,7 @@
 ;; passant target square, this is "-". If a pawn has just made a
 ;; two-square move, this is the position "behind" the pawn.
 (define (board->fen-en-passant b)
-  (let ([ idx (board-ep-idx b) ])
+  (let ([ idx (get-ep-idx b) ])
     (if (= idx 0)
         "-"
         (idx->pos idx))))

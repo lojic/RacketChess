@@ -109,7 +109,7 @@
       ;; Capture north west
       (cond [ (is-other-piece? piece nw)
               (add-tactical-move! b (create-move piece idx nw-idx #:captured-piece nw)) ]
-            [ (= (board-ep-idx b) nw-idx)
+            [ (= (get-ep-idx b) nw-idx)
               (add-tactical-move! b
                                  (create-move piece idx nw-idx
                                               #:captured-piece nw #:is-ep-capture? #t)) ])
@@ -117,7 +117,7 @@
       ;; Capture north east
       (cond [ (is-other-piece? piece ne)
               (add-tactical-move! b (create-move piece idx ne-idx #:captured-piece ne)) ]
-            [ (= (board-ep-idx b) ne-idx)
+            [ (= (get-ep-idx b) ne-idx)
               (add-tactical-move! b
                                  (create-move piece idx ne-idx
                                               #:captured-piece ne #:is-ep-capture? #t)) ]))))
@@ -171,7 +171,6 @@
   (require rackunit)
 
   (let ([ b (create-board) ])
-    (generate-moves! b)
-    (print-moves b))
+    (generate-moves! b))
 
   )

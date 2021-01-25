@@ -8,12 +8,6 @@
 (provide evaluate
          make-move!
          print-board
-         quiet-head
-         quiet-moves
-         set-quiet-head!
-         set-tactical-head!
-         tactical-head
-         tactical-moves
          unmake-move!)
 
 (define (evaluate b)
@@ -36,123 +30,147 @@
           [ else       val          ])))
 
 (define (make-move! b m)
-  ;; Reset en passant capture idx (we may set it below if double push)
-  (set-board-ep-idx! b 0)
-
   (let* ([ squares (board-squares b)           ]
+         [ white?  (board-whites-move? b)      ]
          [ src-idx (move-src-idx m)            ]
          [ dst-idx (move-dst-idx m)            ]
-         [ src     (bytes-ref squares src-idx) ]
+         [ piece   (move-src m)                ]
          [ dst     (bytes-ref squares dst-idx) ])
-    (cond [ (is-pawn? src)
-            (let ([ dist (- dst-idx src-idx) ])
-              (cond
-               ;; If a pawn has moved 2 spaces, record the en
-               ;; passant capture idx
-               [ (or (= dist (* north 2))
-                     (= dist (* south 2)))
-                 (set-board-ep-idx! b (+ src-idx (arithmetic-shift dist -1))) ]
-
-               ;; Handle en passant capture
-               [ (move-is-ep-capture? m)
-                 ;; We've already stored the captured pawn in
-                 ;; captured_piece, so just remove the captured pawn
-                 ;; from the board
-                 (let ([ target (+ dst-idx (if (is-white? src) south north)) ])
-                   (bytes-set! squares target empty-square)) ]
-
-               ;; Handle promotion
-               [ (move-promoted-piece m)
-                 (set! src (move-promoted-piece m)) ])) ]
-
-          [ (is-king? src)
-            ;; Update king idx
-            (if (is-white? src)
-                (set-board-white-king-idx! b dst-idx)
-                (set-board-black-king-idx! b dst-idx))
-
-            ;; Handle castling
-            (let ([ dist (- dst-idx src-idx) ])
-              (cond [ (= dist (* 2 east))
-                      (set-move-is-castle-kingside?! m #t)
-                      (set! src (bitwise-ior src king-castled-bit))
-                      ;; Move rook
-                      (bytes-set! squares
-                                  (+ src-idx east)
-                                  (bitwise-ior (bytes-ref squares (+ src-idx (* 3 east)))
-                                               piece-moved-bit))
-                      (bytes-set! squares
-                                  (+ src-idx (* 3 east))
-                                  empty-square) ]
-
-                    [ (= dist (* 2 west))
-                      (set-move-is-castle-queenside?! m #t)
-                      (set! src (bitwise-ior src king-castled-bit))
-                      ;; Move rook
-                      (bytes-set! squares
-                                  (+ src-idx west)
-                                  (bitwise-ior (bytes-ref squares (+ src-idx (* 4 west)))
-                                               piece-moved-bit))
-                      (bytes-set! squares
-                                  (+ src-idx (* 4 west))
-                                  empty-square) ])) ])
+    (cond [ (is-pawn? piece)
+            (set! piece (make-pawn-move! b squares m white? piece src-idx dst-idx)) ]
+          [ (is-king? piece)
+            (set! piece (make-king-move! b squares m white? piece src-idx dst-idx)) ])
 
     ;; Move
-    (bytes-set! squares dst-idx (bitwise-ior src piece-moved-bit))
+    (bytes-set! squares dst-idx (bitwise-ior piece piece-moved-bit))
     (bytes-set! squares src-idx empty-square)
-    (set-board-depth! b (add1 (board-depth b)))
-    (if (board-whites-move? b)
+
+    (if white?
         (set-board-whites-move?! b #f)
         ;; Increment full-move on Black's move
         (begin
           (set-board-full-move! b (add1 (board-full-move b)))
-          (set-board-whites-move?! b #t)))))
+          (set-board-whites-move?! b #t)))
+
+    ;; Increase depth
+    (set-board-depth! b (add1 (board-depth b)))))
+
+(define (make-king-move! b squares m white? piece src-idx dst-idx)
+  ;; Update king idx
+  (if white?
+      (set-board-white-king-idx! b dst-idx)
+      (set-board-black-king-idx! b dst-idx))
+
+  ;; Handle castling
+  (let ([ dist (- dst-idx src-idx) ])
+    (cond [ (= dist (* 2 east))
+            (set-move-is-castle-kingside?! m #t)
+            (set! piece (bitwise-ior piece king-castled-bit))
+            ;; Move rook
+            (bytes-set! squares
+                        (+ src-idx east)
+                        (bitwise-ior (bytes-ref squares (+ src-idx (* 3 east)))
+                                     piece-moved-bit))
+            (bytes-set! squares
+                        (+ src-idx (* 3 east))
+                        empty-square) ]
+
+          [ (= dist (* 2 west))
+            (set-move-is-castle-queenside?! m #t)
+            (set! piece (bitwise-ior piece king-castled-bit))
+            ;; Move rook
+            (bytes-set! squares
+                        (+ src-idx west)
+                        (bitwise-ior (bytes-ref squares (+ src-idx (* 4 west)))
+                                     piece-moved-bit))
+            (bytes-set! squares
+                        (+ src-idx (* 4 west))
+                        empty-square) ]))
+
+  piece)
+
+(define (make-pawn-move! b squares m white? piece src-idx dst-idx)
+  (let ([ dist (- dst-idx src-idx) ])
+    (cond
+     ;; If a pawn has moved 2 spaces, record the en
+     ;; passant capture idx
+     [ (or (= dist (* north 2))
+           (= dist (* south 2)))
+       (set-ep-idx! b (+ src-idx (arithmetic-shift dist -1))) ]
+
+     ;; Handle en passant capture
+     [ (move-is-ep-capture? m)
+       ;; We've already stored the captured pawn in
+       ;; captured_piece, so just remove the captured pawn
+       ;; from the board
+       (let ([ target (+ dst-idx (if white? south north)) ])
+         (bytes-set! squares target empty-square)) ]
+
+     ;; Handle promotion
+     [ (move-promoted-piece m)
+       (set! piece (move-promoted-piece m)) ]))
+
+  piece)
 
 (define (unmake-move! b m)
-  ;; Reset en passant capture idx
-  (set-board-ep-idx! b 0)
+  ;; Decrease depth
+  (set-board-depth! b (sub1 (board-depth b)))
 
-  (let* ([ squares (board-squares b)           ]
-         [ src-idx (move-src-idx m)            ]
-         [ dst-idx (move-dst-idx m)            ]
-         [ src     (bytes-ref squares src-idx) ]
-         [ dst     (bytes-ref squares dst-idx) ])
-    ;; Move piece back to src position By storing the original piece in
-    ;; the Move struct, when we restore it, we also restore the king
-    ;; castled bit
-    (bytes-set! squares src-idx (move-src m))
+  (let* ([ squares        (board-squares b)       ]
+         [ white?         (board-whites-move? b)  ]
+         [ src-idx        (move-src-idx m)        ]
+         [ dst-idx        (move-dst-idx m)        ]
+         [ captured-piece (move-captured-piece m) ]
+         [ piece          (move-src m)            ])
 
-    ;; Replace captured piece if it exists; otherwise set dst to empty
-    (cond [ (not (move-captured-piece m))
-            (bytes-set! squares dst-idx empty-square) ]
-          [ (move-is-ep-capture? m)
-            ;; Unmake en passant capture
-            (bytes-set! squares dst-idx empty-square)
-            (let ([ target (+ dst-idx
-                              (if (is-white? (move-src m)) south north))])
-              (bytes-set! squares target (move-captured-piece m))) ]
-          [ else
-            (bytes-set! squares dst-idx (move-captured-piece m)) ])
+    ;; Move piece back to src position. Since we stored the piece in
+    ;; the move, when we place it back at the src position, we restore
+    ;; any modified bits also.
+    (bytes-set! squares src-idx piece)
 
-    (when (is-king? dst)
-      ;; Revert king idx
-      (if (is-white? dst)
-          (set-board-white-king-idx! b src-idx)
-          (set-board-black-king-idx! b src-idx))
+    (if captured-piece
+        ;; Unmake capture move
+        (cond [ (move-is-ep-capture? m)
+                ;; Unmake en passant capture
+                (bytes-set! squares dst-idx empty-square)
+                (let ([ target (+ dst-idx
+                                  (if white? south north))])
+                  (bytes-set! squares target captured-piece)) ]
+              [ else
+                ;; Unmake regular capture
+                (bytes-set! squares dst-idx captured-piece) ])
 
-      ;; Handle un-castling
-      (cond [ (move-is-castle-kingside? m)
-              ;; Move rook back
-              (bytes-set! squares (+ src-idx (* 3 east)) (bytes-ref squares (+ src-idx east)))
-              (bytes-set! squares (+ src-idx east) empty-square) ]
-            [ (move-is-castle-queenside? m)
-              ;; Move rook back
-              (bytes-set! squares (+ src-idx (* 4 west)) (bytes-ref squares (+ src-idx west)))
-              (bytes-set! squares (+ src-idx west) empty-square) ]))
+        ;; Unmake quiet move
+        (bytes-set! squares dst-idx empty-square))
 
-    ;; Reset player to move an depth
-    (set-board-whites-move?! b (not (board-whites-move? b)))
-    (set-board-depth! b (sub1 (board-depth b)))))
+    (when (is-king? piece)
+      (unmake-king-move! b squares m white? piece src-idx))
+
+    ;; Reset EP square, player to move
+    (set-ep-idx! b 0)
+
+    (if white?
+        (set-board-whites-move?! b #t)
+        ;; Decrement full-move on Black's move
+        (begin
+          (set-board-full-move! b (sub1 (board-full-move b)))
+          (set-board-whites-move?! b #f)))))
+
+(define (unmake-king-move! b squares m white? piece src-idx)
+  ;; Revert king idx
+  (if white?
+      (set-board-white-king-idx! b src-idx)
+      (set-board-black-king-idx! b src-idx))
+
+  ;; Handle un-castling
+  (cond [ (move-is-castle-kingside? m)
+          ;; Move rook back
+          (bytes-set! squares (+ src-idx (* 3 east)) (bytes-ref squares (+ src-idx east)))
+          (bytes-set! squares (+ src-idx east) empty-square) ]
+        [ (move-is-castle-queenside? m)
+          ;; Move rook back
+          (bytes-set! squares (+ src-idx (* 4 west)) (bytes-ref squares (+ src-idx west)))
+          (bytes-set! squares (+ src-idx west) empty-square) ]))
 
 (define (print-board b #:full [ full #f ])
   (for ([ rank (in-range 8) ])
@@ -169,39 +187,13 @@
 
   (when full
     (printf "Depth: ~a. " (board-depth b))
-    (when (> (board-ep-idx b) 0)
-      (printf "EP Square: ~a. " (idx->pos (board-ep-idx b))))
+    (when (> (get-ep-idx b) 0)
+      (printf "EP Square: ~a. " (idx->pos (get-ep-idx b))))
     (printf "White king pos: ~a, Black king pos: ~a\n"
             (idx->pos (board-white-king-idx b))
             (idx->pos (board-black-king-idx b))))
 
   (printf "\n"))
-
-(define (quiet-head b [ d #f ])
-  (vector-ref (board-quiet-head b)
-              (if d d (board-depth b))))
-
-(define (quiet-moves b [ d #f ])
-  (vector-ref (board-quiet-moves b)
-              (if d d (board-depth b))))
-
-(define (set-quiet-head! b v [ d #f ])
-  (vector-set! (board-quiet-head b)
-               (if d d (board-depth b))
-               v))
-
-(define (set-tactical-head! b v [ d #f ])
-  (vector-set! (board-tactical-head b)
-               (if d d (board-depth b))
-               v))
-
-(define (tactical-head b [ d #f ])
-  (vector-ref (board-tactical-head b)
-              (if d d (board-depth b))))
-
-(define (tactical-moves b [ d #f ])
-  (vector-ref (board-tactical-moves b)
-              (if d d (board-depth b))))
 
 (define (run)
   (let* ([ b (create-board) ]

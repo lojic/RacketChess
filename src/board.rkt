@@ -4,9 +4,17 @@
 
 (provide create-board
          file-rank->idx
-         pos->idx
-         init-moves!
+         get-ep-idx
          idx->pos
+         init-moves!
+         pos->idx
+         quiet-head
+         quiet-moves
+         set-ep-idx!
+         set-quiet-head!
+         set-tactical-head!
+         tactical-head
+         tactical-moves
          (struct-out board))
 
 ;; 10x12 Board Representation
@@ -81,12 +89,13 @@
              25                            ; black-king-idx
              95                            ; white-king-idx
              1                             ; full-move
-             0                             ; ep-idx
+             (make-vector max-depth)       ; ep-idx
              (make-vector max-depth)       ; quiet-moves
              (make-vector max-depth)       ; quiet-head
              (make-vector max-depth)       ; tactical-moves
              (make-vector max-depth)) ])   ; tactical-head
     (for ([ i (in-range max-depth) ])
+      (vector-set! (board-ep-idx b) i 0)
       (vector-set! (board-quiet-head b) i -1)
       (vector-set! (board-quiet-moves b) i (make-vector max-moves))
       (vector-set! (board-tactical-head b) i -1)
@@ -107,6 +116,45 @@
 
 (define (idx->pos idx)
   (vector-ref positions idx))
+
+;; Return the index of the EP square for one depth above i.e. the one
+;; set w/ the previous move.
+(define (get-ep-idx b)
+  (let ([ d (sub1 (board-depth b)) ])
+    (if (< d 0)
+        0
+        (vector-ref (board-ep-idx b) d))))
+
+(define (set-ep-idx! b v [d #f])
+  (vector-set! (board-ep-idx b)
+               (if d d (board-depth b))
+               v))
+
+(define (quiet-head b [ d #f ])
+  (vector-ref (board-quiet-head b)
+              (if d d (board-depth b))))
+
+(define (quiet-moves b [ d #f ])
+  (vector-ref (board-quiet-moves b)
+              (if d d (board-depth b))))
+
+(define (set-quiet-head! b v [ d #f ])
+  (vector-set! (board-quiet-head b)
+               (if d d (board-depth b))
+               v))
+
+(define (set-tactical-head! b v [ d #f ])
+  (vector-set! (board-tactical-head b)
+               (if d d (board-depth b))
+               v))
+
+(define (tactical-head b [ d #f ])
+  (vector-ref (board-tactical-head b)
+              (if d d (board-depth b))))
+
+(define (tactical-moves b [ d #f ])
+  (vector-ref (board-tactical-moves b)
+              (if d d (board-depth b))))
 
 (module+ test
   (require rackunit)
