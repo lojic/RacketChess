@@ -153,15 +153,15 @@
 (define (fen->board-placement-row! b rank fen-row)
   (define squares (board-squares b))
 
-  (let loop ([ file 0 ])
-    (when (< file 8)
-      (let ([ s (substring fen-row file (add1 file)) ])
-        (if (regexp-match? #px"^\\d$" s)
-            (loop (+ file (string->number s)))
-            (let* ([ piece (symbol-piece s)           ]
+  (let loop ([ file 0 ][ chars (string->list fen-row) ])
+    (when (and (< file 8) (not (null? chars)))
+      (let ([ c (car chars) ])
+        (if (char-numeric? c)
+            (loop (+ file (- (char->integer c) (char->integer #\0))) (cdr chars))
+            (let* ([ piece (symbol-piece (~a c)) ]
                    [ idx   (file-rank->idx file rank) ])
               (bytes-set! squares idx piece)
-              (loop (add1 file))))))))
+              (loop (add1 file) (cdr chars))))))))
 
 ;; --------------------------------------------------------------------------------------------
 ;; Create a FEN record to represent a board
@@ -297,14 +297,15 @@
 (module+ test
   (require rackunit)
 
-  (define initial-fen "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
-
   ;; ------------------------------------------------------------------------------------------
   ;; fen->board!
   ;; ------------------------------------------------------------------------------------------
 
   (let* ([ b (fen->board initial-fen) ])
     (check-equal? (board->fen b) initial-fen))
+
+  (let ([ fen "8/2pR1p2/1pP3kp/p7/5rp1/2P5/r3NKPP/5B1R w - - 0 34" ])
+    (check-equal? (board->fen (fen->board fen)) fen))
 
   ;; ------------------------------------------------------------------------------------------
   ;; board->fen

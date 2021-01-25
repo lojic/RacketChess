@@ -2,10 +2,13 @@
 
 (require "./board-funcs.rkt")
 (require "./board.rkt")
+(require "./legality.rkt")
 (require "./move.rkt")
 (require "./movement.rkt")
 (require "./pgn.rkt")
+(require "./fen.rkt")
 (require "./piece.rkt")
+(require debug/repl)
 
 (define (search b max-level)
   (set-board-depth! b 0)
@@ -47,22 +50,30 @@
                     (if (= depth 0) (cons beta move)  beta))
                 (begin
                   (make-move! b m)
-                  (let ([ score (alpha-beta! b max-level alpha beta) ])
-                    (unmake-move! b m)
-                    (if maximizing
-                        (if (> score alpha)
-                            (loop score beta m)
-                            (loop alpha beta move))
-                        (if (< score beta)
-                            (loop alpha score m)
-                            (loop alpha beta move)))))))))))
+                  (if (is-legal? b m)
+                      ;; Legal move, continue
+                      (let ([ score (alpha-beta! b max-level alpha beta) ])
+                        (unmake-move! b m)
+                        (if maximizing
+                            (if (> score alpha)
+                                (loop score beta m)
+                                (loop alpha beta move))
+                            (if (< score beta)
+                                (loop alpha score m)
+                                (loop alpha beta move))))
+                      ;; Illegal move, ignore move
+                      (begin
+                        (unmake-move! b m)
+                        (loop alpha beta move))))))))))
 
-(define (game depth computer-plays-black? [ file-path #f ])
-  (define b (create-board))
+(define (game depth computer-plays-black? [ fen #f ])
+  (define b (if fen
+                (fen->board fen)
+                (fen->board)))
 
-  (when file-path
-    (pgn-load-file! b file-path)
-    (print-board b #:full #t))
+  ;; (when file-path
+  ;;   (pgn-load-file! b file-path)
+  ;;   (print-board b #:full #t))
 
   (when computer-plays-black?
     (display "Enter move: ")
@@ -89,5 +100,6 @@
           (printf "No move!\n")))))
 
 ;(game 8 #t "./game.01")
-(game 7 #f)
+;(game 7 #f)
+(game 7 #f "8/2pR1p2/1pP3kp/p7/5rp1/2P5/r3NKPP/5B1R w - - 0 34")
 ;(game 8)
