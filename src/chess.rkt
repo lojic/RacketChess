@@ -71,14 +71,8 @@
                 (fen->board fen)
                 (fen->board)))
 
-  ;; (when file-path
-  ;;   (pgn-load-file! b file-path)
-  ;;   (print-board b #:full #t))
-
   (when computer-plays-black?
-    (display "Enter move: ")
-    (make-move! b (pgn-move b (read-line)))
-    (print-board b #:full #t))
+    (make-human-move! b))
 
   (let loop ()
     (let* ([ pair (time (search b depth)) ]
@@ -92,14 +86,22 @@
             (make-move! b m)
             (print-board b #:full #t)
             (displayln "")
-            (display "Enter move: ")
-            (displayln "")
-            (make-move! b (pgn-move b (read-line)))
-            (print-board b #:full #t)
+            (make-human-move! b)
             (loop))
           (printf "No move!\n")))))
 
+(define (make-human-move! b)
+  (display "Enter move: ")
+  (let ([ result (with-handlers ([ exn:fail? (λ (e) #f) ])
+                   (make-pgn-move! b (read-line))) ])
+    (if result
+        (print-board b #:full #t)
+        (make-human-move! b))))
+
+
 ;(game 8 #t "./game.01")
-;(game 7 #f)
-(game 7 #f "8/2pR1p2/1pP3kp/p7/5rp1/2P5/r3NKPP/5B1R w - - 0 34")
+;(game 7 #f "3rr1k1/pqp2pbp/3np1p1/8/3n4/Q2B1P2/PP4PP/R1B2KNR b - - 0 0")
+;(game 7 #f "8/2pR1p2/1pP3kp/p7/5rp1/2P5/r3NKPP/5B1R w - - 0 34")
+(game 7 #t "5k1r/5Bp1/p2bQ2p/1p6/3B1q2/2P3nP/PP3PP1/4RK2 w - - 0 1")
+;(game 7 #t)
 ;(game 8)

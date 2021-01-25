@@ -182,16 +182,7 @@
 
   (define (rank-ok? rank)
     (if from-rank
-        (let ([ from (match from-rank
-                       [ "8" 0 ]
-                       [ "7" 1 ]
-                       [ "6" 2 ]
-                       [ "5" 3 ]
-                       [ "4" 4 ]
-                       [ "3" 5 ]
-                       [ "2" 6 ]
-                       [ "1" 7 ]) ])
-          (= rank from))
+        (char=? rank (string-ref from-rank 0))
         #t))
 
   (define (pred? tuple)
@@ -269,26 +260,6 @@
                      (values (pos->idx "e1") (pos->idx "c1"))
                      (values (pos->idx "e8") (pos->idx "c8"))) ])
     (create-move (bytes-ref (board-squares b) src-idx) src-idx dst-idx #:is-castle-queenside? #t)))
-
-(define (orig-pgn-piece-move b is-white? str)
-  (let* ([ groups (regexp-match #px"^([a-h][1-8])([-x])([a-h][1-8])$" str) ]
-         [ src-pos     (second groups)                       ]
-         [ src-idx     (pos->idx src-pos)                ]
-         [ src         (bytes-ref (board-squares b) src-idx) ]
-         [ cap-or-move (third groups)                        ]
-         [ dst-pos     (fourth groups)                       ]
-         [ dst-idx     (pos->idx dst-pos)                ]
-         [ dst         (bytes-ref (board-squares b) dst-idx) ])
-    (if (or (and (string=? cap-or-move "x")
-                 (is-piece? dst))
-            (and (string=? cap-or-move "-")
-                 (= dst empty-square)))
-        (create-move src src-idx dst-idx
-                     #:captured-piece (if (= dst empty-square)
-                                          #f
-                                          dst))
-        (begin
-          (error (format "invalid move spec: ~a" str))))))
 
 (module+ test
   (require rackunit)
