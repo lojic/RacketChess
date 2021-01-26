@@ -85,7 +85,7 @@
             (print-move m)
             (displayln "")
             (make-move! b m)
-            (print-board b #:full #t)
+            (print-board b #:full? #t)
             (displayln "")
             (make-human-move! b)
             (loop))
@@ -96,7 +96,7 @@
   (let ([ result (with-handlers ([ exn:fail? (λ (e) #f) ])
                    (make-pgn-move! b (read-line))) ])
     (if result
-        (print-board b #:full #t)
+        (print-board b #:full? #t)
         (make-human-move! b))))
 
 

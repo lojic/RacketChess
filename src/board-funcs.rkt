@@ -1,7 +1,6 @@
 #lang racket
 
 (require "./board.rkt")
-(require "./fen.rkt")
 (require "./piece.rkt")
 (require "./move.rkt")
 
@@ -51,14 +50,11 @@
       (bytes-set! squares dst-idx (bitwise-ior piece piece-moved-bit))
       (bytes-set! squares src-idx empty-square)
 
-      (if white?
-          (set-board-whites-move?! b #f)
-          ;; Increment full-move on Black's move
-          (begin
-            (set-board-full-move! b (add1 (board-full-move b)))
-            (set-board-whites-move?! b #t)))
+      ;; Player to move
+      (set-board-whites-move?! b (not (board-whites-move? b)))
 
-      ;; Increase depth
+      ;; Increment depth & move-i
+      (set-board-move-i! b (add1 (board-move-i b)))
       (set-board-depth! b (add1 (board-depth b))))))
 
 ;; Returns the source piece (possibly modified)
@@ -103,8 +99,8 @@
      ;; If a pawn has moved 2 spaces, record the en
      ;; passant capture idx
      [ (or (= dist n2) (= dist s2))
-       ;; We set the EP target square at the next lower depth
-       (set-ep-idx! b (+ src-idx (arithmetic-shift dist -1)) 1)
+       ;; Set the EP target
+       (set-ep-idx! b (+ src-idx (arithmetic-shift dist -1)))
        piece ]
 
      ;; Handle en passant capture
@@ -124,8 +120,9 @@
      [ else piece ])))
 
 (define (unmake-move! b m)
-  ;; Decrease depth
+  ;; Decrement depth & move-i
   (set-board-depth! b (sub1 (board-depth b)))
+  (set-board-move-i! b (sub1 (board-move-i b)))
 
   (let* ([ squares        (board-squares b)       ]
          [ white?         (board-whites-move? b)  ]
@@ -157,16 +154,11 @@
     (when (is-king? piece)
       (unmake-king-move! b squares m white? piece src-idx))
 
-    ;; Reset EP square (at the next lower depth)
-    (set-ep-idx! b 0 1)
+    ;; Reset EP square
+    (set-ep-idx! b 0)
 
-    ;; Reset player to move and full-move
-    (if white?
-        (set-board-whites-move?! b #t)
-        ;; Decrement full-move on Black's move
-        (begin
-          (set-board-full-move! b (sub1 (board-full-move b)))
-          (set-board-whites-move?! b #f)))))
+    ;; Player to move
+    (set-board-whites-move?! b (not (board-whites-move? b)))))
 
 (define (unmake-king-move! b squares m white? piece src-idx)
   ;; Revert king idx
@@ -184,7 +176,7 @@
           (bytes-set! squares (+ src-idx (* 4 west)) (bytes-ref squares (+ src-idx west)))
           (bytes-set! squares (+ src-idx west) empty-square) ]))
 
-(define (print-board b #:full [ full #f ])
+(define (print-board b #:full? [ full? #f ])
   (for ([ rank (in-range 8) ])
     (for ([ file (in-range 8) ])
       (let* ([ idx   (+ 21 file (* rank 10))           ]
@@ -197,8 +189,9 @@
       (printf "White's move\n")
       (printf "Black's move\n"))
 
-  (when full
+  (when full?
     (printf "Depth: ~a. " (board-depth b))
+    (printf "Move-i: ~a. " (board-move-i b))
     (when (> (get-ep-idx b) 0)
       (printf "EP Square: ~a. " (idx->pos (get-ep-idx b))))
     (printf "White king pos: ~a, Black king pos: ~a\n"
@@ -214,24 +207,15 @@
          [ dst-idx (pos->idx "e4") ]
          [ src (bytes-ref squares src-idx) ]
          [ m (create-move src src-idx dst-idx) ])
-    (print-board b #:full #t)
+    (print-board b #:full? #t)
     (make-move! b m)
-    (print-board b #:full #t)
+    (print-board b #:full? #t)
     (unmake-move! b m)
-    (print-board b #:full #t)
+    (print-board b #:full? #t)
     ))
 
 (module+ test
   (require rackunit)
-
-  ;; ------------------------------------------------------------------------------------------
-  ;; evaluate
-  ;; ------------------------------------------------------------------------------------------
-  (let ([ b (fen->board) ])
-    (check-within (evaluate b) 0.0 0.00001)
-    ;; Remove the White Queen
-    (bytes-set! (board-squares b) 94 empty-square)
-    (check-within (evaluate b) -9.0 0.00001))
 
 
   )

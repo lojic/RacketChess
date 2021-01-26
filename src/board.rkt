@@ -4,6 +4,7 @@
 
 (provide create-board
          file-rank->idx
+         full-move
          get-ep-idx
          idx->pos
          init-moves!
@@ -12,6 +13,7 @@
          quiet-moves
          reset-depth!
          set-ep-idx!
+         set-full-move!
          set-quiet-head!
          set-tactical-head!
          tactical-head
@@ -40,12 +42,12 @@
                whites-move?
                black-king-idx
                white-king-idx
-               full-move
-               ep-idx
-               quiet-moves
-               quiet-head
-               tactical-moves
-               tactical-head)
+               move-i
+               ep-idx         ; Indexed by move-i
+               quiet-moves    ; Indexed by depth
+               quiet-head     ; Indexed by depth
+               tactical-moves ; Indexed by depth
+               tactical-head) ; Indexed by depth
         #:transparent #:mutable)
 
 (define initial-squares
@@ -79,7 +81,7 @@
    "  " "  " "  " "  " "  " "  " "  " "  " "  " "  "   ; 100 - 109
    "  " "  " "  " "  " "  " "  " "  " "  " "  " "  ")) ; 120 - 119
 
-(define max-depth 50)
+(define max-depth 100)
 (define max-moves 250)
 
 (define (create-board)
@@ -89,7 +91,7 @@
              #t                            ; whites-move?
              25                            ; black-king-idx
              95                            ; white-king-idx
-             1                             ; full-move
+             0                             ; move-i
              (make-vector max-depth)       ; ep-idx
              (make-vector max-depth)       ; quiet-moves
              (make-vector max-depth)       ; quiet-head
@@ -107,9 +109,11 @@
 (define-inline (file-rank->idx file rank)
   (+ 21 file (* rank 10)))
 
-;; Return the index of the EP square for the previous move.
+(define-inline (full-move b)
+  (add1 (arithmetic-shift (board-move-i b) -1)))
+
 (define (get-ep-idx b)
-  (vector-ref (board-ep-idx b) (board-depth b)))
+  (vector-ref (board-ep-idx b) (board-move-i b)))
 
 (define (idx->pos idx)
   (vector-ref positions idx))
@@ -131,16 +135,17 @@
               (if d d (board-depth b))))
 
 (define (reset-depth! b)
-  (let ([ ep-idx (get-ep-idx b) ])
-    (set-board-depth! b 0)
-    (set-ep-idx! b ep-idx)))
+  (set-board-depth! b 0))
 
-(define (set-ep-idx! b v [delta #f])
+(define (set-ep-idx! b v)
   (vector-set! (board-ep-idx b)
-               (if delta
-                   (+ delta (board-depth b))
-                   (board-depth b))
+               (board-move-i b)
                v))
+
+(define-inline (set-full-move! b full-move blacks-move?)
+  (if blacks-move?
+      (set-board-move-i! b (add1 (arithmetic-shift (sub1 full-move) 1)))
+      (set-board-move-i! b (arithmetic-shift (sub1 full-move) 1))))
 
 (define (set-quiet-head! b v [ d #f ])
   (vector-set! (board-quiet-head b)
@@ -183,8 +188,8 @@
     ;; white-king-idx
     (check-equal? (board-white-king-idx b) 95)
 
-    ;; full-move
-    (check-equal? (board-full-move b) 1)
+    ;; move-i
+    (check-equal? (board-move-i b) 0)
 
     ;; ep-idx
     (check-equal? (vector-length (board-ep-idx b)) max-depth)

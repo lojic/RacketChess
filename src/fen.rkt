@@ -3,6 +3,7 @@
 ;; See https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation
 
 (require "./board.rkt"
+         "./board-funcs.rkt"
          "./board-slow.rkt"
          "./piece.rkt")
 
@@ -28,7 +29,7 @@
     (fen->board-castling!     b castling)
     (fen->board-ep-target!    b ep-target)
     (fen->board-half-move!    b half-move)
-    (fen->board-full-move!    b full-move)
+    (fen->board-full-move!    b full-move active-color)
     b))
 
 (define (fen->board-active-color! b active-color)
@@ -140,9 +141,9 @@
   ;; We don't use the half move clock yet
   (void))
 
-(define (fen->board-full-move! b full-move)
+(define (fen->board-full-move! b full-move active-color)
   (if (regexp-match? #px"^[0-9]+$" full-move)
-      (set-board-full-move! b (string->number full-move))
+      (set-full-move! b (string->number full-move) (string=? "b" active-color))
       (error "fen->board-full-move!: full-move must be a number")))
 
 (define (fen->board-placement! b placement)
@@ -241,7 +242,7 @@
 ;; Fullmove number: The number of the full move. It starts at 1, and
 ;; is incremented after Black's move.
 (define (board->fen-full-move b)
-  (number->string (board-full-move b)))
+  (number->string (full-move b)))
 
 ;; Halfmove clock: This is the number of halfmoves since the last
 ;; capture or pawn advance. The reason for this field is that the
