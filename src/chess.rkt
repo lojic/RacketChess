@@ -33,6 +33,7 @@
 
 (define (alpha-beta! b max-level alpha beta)
   (define depth (board-depth b))
+
   (if (= depth max-level)
       (evaluate b)
       (let ([ maximizing (board-whites-move? b) ]
@@ -103,12 +104,12 @@
 ;; The board printed after the move doesn't show the protecting pawn !!!!
 ;; https://lichess.org/OfP4YCgQKjjC
 
-(game 7 #f "rnbqkb1r/p4p1p/2p1p1p1/1p1pP3/3Pn2P/2P2QP1/PP3P2/RNB1KBNR w KQkq d6 0 1")
+;(game 7 #f)
 
+;(game 7 #f "rnbqkb1r/p4p1p/2p1p1p1/1p1pP3/3Pn2P/2P2QP1/PP3P2/RNB1KBNR w KQkq d6 0 1")
 ;(game 8 #t "./game.01")
 ;(game 7 #f "3rr1k1/pqp2pbp/3np1p1/8/3n4/Q2B1P2/PP4PP/R1B2KNR b - - 0 0")
 ;(game 7 #f "8/2pR1p2/1pP3kp/p7/5rp1/2P5/r3NKPP/5B1R w - - 0 34")
 ;(game 7 #t "5k1r/5Bp1/p2bQ2p/1p6/3B1q2/2P3nP/PP3PP1/4RK2 w - - 0 1")
-;(game 7 #f)
 ;(game 11 #f "2k5/p1p5/8/6K1/2P5/8/PP1N2r1/R1BR4 w - - 0 1")
 ;(game 8)

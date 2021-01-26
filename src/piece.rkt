@@ -25,7 +25,6 @@
          is-rook?
          is-white?
          is-white-king?
-         king-castled-bit
          piece-moved-bit
          piece-symbol
          piece-type
@@ -50,7 +49,7 @@
 ;;   110 King
 ;;   111 Not used
 ;; Bit 3 Piece has moved
-;; Bit 4 King has castled
+;; Bit 4 Not used
 ;; Bit 5 Not used
 ;; Bit 6 Black
 ;; Bit 7 White
@@ -58,7 +57,6 @@
 (define black-bit             #b01000000)
 (define color-bits            #b11000000)
 (define guard-square          #b11111111) ; Note: both black and white bits are set purposely :)
-(define king-castled-bit      #b00010000)
 (define piece-moved-bit       #b00001000)
 (define piece-type-bits       #b00000111)
 (define piece-type-color-bits #b11000111)
@@ -72,7 +70,7 @@
 (define queen-bits  #b101)
 (define king-bits   #b110)
 
-;;                     WB_CM___
+;;                     WB__M___
 (define white-pawn   #b10000001) ; 0x81
 (define white-knight #b10000010) ; 0x82
 (define white-bishop #b10000011) ; 0x83
@@ -107,6 +105,8 @@
 (define symbol-pieces
   (for/hash ([ pair (in-list piece-symbol-alist) ])
     (values (cdr pair) (car pair))))
+
+
 
 (define-inline (has-moved? piece)
   (> (bitwise-and piece piece-moved-bit) #b0))
@@ -172,17 +172,21 @@
 (define-inline (piece-type piece)
   (bitwise-and piece piece-type-bits))
 
-(define (piece-value piece)
-  (let ([ val (match (bitwise-and piece piece-type-bits)
-                [ #b001 1.0 ]
-                [ #b010 3.0 ]
-                [ #b011 3.0 ]
-                [ #b100 5.0 ]
-                [ #b101 9.0 ]
-                [ #b110 100.0 ]) ])
+(define-inline (piece-value piece)
+  (let ([ type (bitwise-and piece piece-type-bits) ])
     (if (is-white? piece)
-        val
-        (- val))))
+        (cond [ (= type #b001)   1.0 ]
+              [ (= type #b010)   3.0 ]
+              [ (= type #b011)   3.0 ]
+              [ (= type #b100)   5.0 ]
+              [ (= type #b101)   9.0 ]
+              [ (= type #b110) 100.0 ])
+        (cond [ (= type #b001)   -1.0 ]
+              [ (= type #b010)   -3.0 ]
+              [ (= type #b011)   -3.0 ]
+              [ (= type #b100)   -5.0 ]
+              [ (= type #b101)   -9.0 ]
+              [ (= type #b110) -100.0 ]))))
 
 (define (symbol-piece sym)
   (hash-ref symbol-pieces sym))
@@ -190,48 +194,151 @@
 (module+ test
   (require rackunit)
 
+  ;; has-moved? -------------------------------------------------------------------------------
+
+  (check-false (has-moved? black-king))
+  (check-not-false (has-moved? (bitwise-ior black-king piece-moved-bit)))
+
+  (check-false (has-moved? white-king))
+  (check-not-false (has-moved? (bitwise-ior white-king piece-moved-bit)))
+
   ;; ------------------------------------------------------------------------------------------
-  ;; piece-value
+  ;; is-<color>? predicates
   ;; ------------------------------------------------------------------------------------------
-  (check-equal? (piece-value white-pawn) 1.0)
-  (check-equal? (piece-value black-pawn) -1.0)
-  (check-equal? (piece-value white-queen) 9.0)
-  (check-equal? (piece-value black-queen) -9.0)
+
+  (check-not-false (is-black? black-bishop))
+  (check-not-false (is-black? black-king))
+  (check-not-false (is-black? black-knight))
+  (check-not-false (is-black? black-pawn))
+  (check-not-false (is-black? black-queen))
+  (check-not-false (is-black? black-rook))
+
+  (check-not-false (is-white? white-bishop))
+  (check-not-false (is-white? white-king))
+  (check-not-false (is-white? white-knight))
+  (check-not-false (is-white? white-pawn))
+  (check-not-false (is-white? white-queen))
+  (check-not-false (is-white? white-rook))
+
+  ;; ------------------------------------------------------------------------------------------
+  ;; is-<piece>? predicates
+  ;; ------------------------------------------------------------------------------------------
+
+  (check-not-false (is-bishop? black-bishop))
+  (check-not-false (is-king?   black-king))
+  (check-not-false (is-knight? black-knight))
+  (check-not-false (is-pawn?   black-pawn))
+  (check-not-false (is-queen?  black-queen))
+  (check-not-false (is-rook?   black-rook))
+
+  (check-not-false (is-bishop? white-bishop))
+  (check-not-false (is-king?   white-king))
+  (check-not-false (is-knight? white-knight))
+  (check-not-false (is-pawn?   white-pawn))
+  (check-not-false (is-queen?  white-queen))
+  (check-not-false (is-rook?   white-rook))
+
+  ;; ------------------------------------------------------------------------------------------
+  ;; is-<color>-<piece>? predicates
+  ;; ------------------------------------------------------------------------------------------
+
+  (check-not-false (is-black-king? black-king))
+  (check-not-false (is-white-king? white-king))
+
+  ;; is-other-color?
+
+  (check-not-false (is-other-color? black-pawn white-rook))
+  (check-not-false (is-other-color? white-pawn black-rook))
+
+  ;; is-other-piece?
+
+  (check-false     (is-other-piece? black-rook black-king))
+  (check-not-false (is-other-piece? black-rook white-king))
+  (check-false     (is-other-piece? white-pawn white-knight))
+  (check-not-false (is-other-piece? white-pawn black-rook))
+
+  ;; is-own-piece?
+
+  (check-not-false (is-own-piece? black-rook black-king))
+  (check-false     (is-own-piece? black-rook white-king))
+  (check-not-false (is-own-piece? white-pawn white-knight))
+  (check-false     (is-own-piece? white-pawn black-rook))
+
+  ;; ------------------------------------------------------------------------------------------
+  ;; is-piece?
+  ;; ------------------------------------------------------------------------------------------
+
+  (check-not-false (is-piece? black-bishop))
+  (check-not-false (is-piece? black-king))
+  (check-not-false (is-piece? black-knight))
+  (check-not-false (is-piece? black-pawn))
+  (check-not-false (is-piece? black-queen))
+  (check-not-false (is-piece? black-rook))
+
+  (check-not-false (is-piece? white-bishop))
+  (check-not-false (is-piece? white-king))
+  (check-not-false (is-piece? white-knight))
+  (check-not-false (is-piece? white-pawn))
+  (check-not-false (is-piece? white-queen))
+  (check-not-false (is-piece? white-rook))
+
+  ;; is-right-color-piece?
+
+  (check-not-false (is-right-color-piece? black-bishop #f))
+  (check-not-false (is-right-color-piece? white-bishop #t))
 
   ;; ------------------------------------------------------------------------------------------
   ;; piece-symbol
   ;; ------------------------------------------------------------------------------------------
-  (check-equal? (piece-symbol white-king) "K")
-  (check-equal? (piece-symbol black-rook) "r")
+
+  (check-equal? (piece-symbol black-bishop) "b")
+  (check-equal? (piece-symbol black-king)   "k")
+  (check-equal? (piece-symbol black-knight) "n")
+  (check-equal? (piece-symbol black-pawn)   "p")
+  (check-equal? (piece-symbol black-queen)  "q")
+  (check-equal? (piece-symbol black-rook)   "r")
+
+  (check-equal? (piece-symbol white-bishop) "B")
+  (check-equal? (piece-symbol white-king)   "K")
   (check-equal? (piece-symbol white-knight) "N")
+  (check-equal? (piece-symbol white-pawn)   "P")
+  (check-equal? (piece-symbol white-queen)  "Q")
+  (check-equal? (piece-symbol white-rook)   "R")
 
   ;; ------------------------------------------------------------------------------------------
-  ;; Bitwise operations
+  ;; piece-value
   ;; ------------------------------------------------------------------------------------------
-  (check-false (has-moved? white-pawn))
-  (check-not-false (is-king? white-king))
-  (check-not-false (is-king? black-king))
-  (check-not-false (is-other-color? black-pawn white-rook))
-  (check-not-false (is-other-color? white-pawn black-rook))
 
-  (check-not-false (is-own-piece? white-pawn white-knight))
-  (check-false     (is-own-piece? white-pawn black-rook))
-  (check-not-false (is-own-piece? black-rook black-king))
-  (check-false     (is-own-piece? black-rook white-king))
+  (check-equal? (piece-value black-pawn)   -1.0)
+  (check-equal? (piece-value black-knight) -3.0)
+  (check-equal? (piece-value black-bishop) -3.0)
+  (check-equal? (piece-value black-rook)   -5.0)
+  (check-equal? (piece-value black-queen)  -9.0)
+  (check-not-false (<= (piece-value black-king) -100.0))
 
-  (check-false     (is-other-piece? white-pawn white-knight))
-  (check-not-false (is-other-piece? white-pawn black-rook))
-  (check-false     (is-other-piece? black-rook black-king))
-  (check-not-false (is-other-piece? black-rook white-king))
+  (check-equal? (piece-value white-pawn)   1.0)
+  (check-equal? (piece-value white-knight) 3.0)
+  (check-equal? (piece-value white-bishop) 3.0)
+  (check-equal? (piece-value white-rook)   5.0)
+  (check-equal? (piece-value white-queen)  9.0)
+  (check-not-false (>= (piece-value white-king) 100.0))
 
-  (check-not-false (is-pawn? white-pawn))
-  (check-not-false (is-pawn? black-pawn))
+  ;; ------------------------------------------------------------------------------------------
+  ;; symbol-piece
+  ;; ------------------------------------------------------------------------------------------
 
-  (check-not-false (is-piece? white-king))
+  (check-equal? (symbol-piece "b") black-bishop)
+  (check-equal? (symbol-piece "k") black-king)
+  (check-equal? (symbol-piece "n") black-knight)
+  (check-equal? (symbol-piece "p") black-pawn)
+  (check-equal? (symbol-piece "q") black-queen)
+  (check-equal? (symbol-piece "r") black-rook)
 
-  (check-not-false (is-right-color-piece? white-bishop #t))
-  (check-not-false (is-right-color-piece? black-bishop #f))
-
-  (check-not-false (is-white? white-knight))
+  (check-equal? (symbol-piece "B") white-bishop)
+  (check-equal? (symbol-piece "K") white-king)
+  (check-equal? (symbol-piece "N") white-knight)
+  (check-equal? (symbol-piece "P") white-pawn)
+  (check-equal? (symbol-piece "Q") white-queen)
+  (check-equal? (symbol-piece "R") white-rook)
 
   )

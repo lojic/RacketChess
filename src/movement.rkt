@@ -16,16 +16,12 @@
 (define (add-quiet-move! b m)
   (let ([ head (add1 (quiet-head b)) ])
     (set-quiet-head! b head)
-    (vector-set! (vector-ref (board-quiet-moves b) (board-depth b))
-                 head
-                 m)))
+    (vector-set! (quiet-moves b) head m)))
 
 (define (add-tactical-move! b m)
   (let ([ head (add1 (tactical-head b)) ])
     (set-tactical-head! b head)
-    (vector-set! (vector-ref (board-tactical-moves b) (board-depth b))
-                 head
-                 m)))
+    (vector-set! (tactical-moves b) head m)))
 
 (define (generate-bishop-moves! b idx piece)
   (generate-sliding-moves! b idx piece north-east)

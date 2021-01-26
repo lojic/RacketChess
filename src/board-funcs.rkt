@@ -10,6 +10,11 @@
          print-board
          unmake-move!)
 
+(define n2 (+ north north))
+(define e2 (+ east east))
+(define s2 (+ south south))
+(define w2 (+ west west))
+
 (define (evaluate b)
   (for*/sum ([ rank (in-range 8) ]
              [ file (in-range 8) ])
@@ -32,29 +37,31 @@
 (define (make-move! b m)
   (let* ([ squares (board-squares b)           ]
          [ white?  (board-whites-move? b)      ]
+         [ piece   (move-src m)                ]
          [ src-idx (move-src-idx m)            ]
          [ dst-idx (move-dst-idx m)            ]
-         [ piece   (move-src m)                ]
          [ dst     (bytes-ref squares dst-idx) ])
-    (cond [ (is-pawn? piece)
-            (set! piece (make-pawn-move! b squares m white? piece src-idx dst-idx)) ]
-          [ (is-king? piece)
-            (set! piece (make-king-move! b squares m white? piece src-idx dst-idx)) ])
+    (let ([ piece
+            (cond [ (is-pawn? piece)
+                    (make-pawn-move! b squares m white? piece src-idx dst-idx) ]
+                  [ (is-king? piece)
+                    (make-king-move! b squares m white? piece src-idx dst-idx) ]
+                  [ else piece ])])
+      ;; Move
+      (bytes-set! squares dst-idx (bitwise-ior piece piece-moved-bit))
+      (bytes-set! squares src-idx empty-square)
 
-    ;; Move
-    (bytes-set! squares dst-idx (bitwise-ior piece piece-moved-bit))
-    (bytes-set! squares src-idx empty-square)
+      (if white?
+          (set-board-whites-move?! b #f)
+          ;; Increment full-move on Black's move
+          (begin
+            (set-board-full-move! b (add1 (board-full-move b)))
+            (set-board-whites-move?! b #t)))
 
-    (if white?
-        (set-board-whites-move?! b #f)
-        ;; Increment full-move on Black's move
-        (begin
-          (set-board-full-move! b (add1 (board-full-move b)))
-          (set-board-whites-move?! b #t)))
+      ;; Increase depth
+      (set-board-depth! b (add1 (board-depth b))))))
 
-    ;; Increase depth
-    (set-board-depth! b (add1 (board-depth b)))))
-
+;; Returns the source piece (possibly modified)
 (define (make-king-move! b squares m white? piece src-idx dst-idx)
   ;; Update king idx
   (if white?
@@ -63,9 +70,9 @@
 
   ;; Handle castling
   (let ([ dist (- dst-idx src-idx) ])
-    (cond [ (= dist (* 2 east))
+    (cond [ (= dist e2)
+
             (set-move-is-castle-kingside?! m #t)
-            (set! piece (bitwise-ior piece king-castled-bit))
             ;; Move rook
             (bytes-set! squares
                         (+ src-idx east)
@@ -75,9 +82,9 @@
                         (+ src-idx (* 3 east))
                         empty-square) ]
 
-          [ (= dist (* 2 west))
+          [ (= dist w2)
+
             (set-move-is-castle-queenside?! m #t)
-            (set! piece (bitwise-ior piece king-castled-bit))
             ;; Move rook
             (bytes-set! squares
                         (+ src-idx west)
@@ -85,18 +92,20 @@
                                      piece-moved-bit))
             (bytes-set! squares
                         (+ src-idx (* 4 west))
-                        empty-square) ]))
+                        empty-square) ])
 
-  piece)
+    piece))
 
+;; Returns the source piece (possibly modified)
 (define (make-pawn-move! b squares m white? piece src-idx dst-idx)
   (let ([ dist (- dst-idx src-idx) ])
     (cond
      ;; If a pawn has moved 2 spaces, record the en
      ;; passant capture idx
-     [ (or (= dist (* north 2))
-           (= dist (* south 2)))
-       (set-ep-idx! b (+ src-idx (arithmetic-shift dist -1))) ]
+     [ (or (= dist n2) (= dist s2))
+       ;; We set the EP target square at the next lower depth
+       (set-ep-idx! b (+ src-idx (arithmetic-shift dist -1)) 1)
+       piece ]
 
      ;; Handle en passant capture
      [ (move-is-ep-capture? m)
@@ -104,13 +113,15 @@
        ;; captured_piece, so just remove the captured pawn
        ;; from the board
        (let ([ target (+ dst-idx (if white? south north)) ])
-         (bytes-set! squares target empty-square)) ]
+         (bytes-set! squares target empty-square))
+       piece ]
 
      ;; Handle promotion
      [ (move-promoted-piece m)
-       (set! piece (move-promoted-piece m)) ]))
+       (move-promoted-piece m) ]
 
-  piece)
+     ;; Nothing applies, just return the piece
+     [ else piece ])))
 
 (define (unmake-move! b m)
   ;; Decrease depth
@@ -146,9 +157,10 @@
     (when (is-king? piece)
       (unmake-king-move! b squares m white? piece src-idx))
 
-    ;; Reset EP square, player to move
-    (set-ep-idx! b 0)
+    ;; Reset EP square (at the next lower depth)
+    (set-ep-idx! b 0 1)
 
+    ;; Reset player to move and full-move
     (if white?
         (set-board-whites-move?! b #t)
         ;; Decrement full-move on Black's move

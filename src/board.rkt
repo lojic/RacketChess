@@ -10,6 +10,7 @@
          pos->idx
          quiet-head
          quiet-moves
+         reset-depth!
          set-ep-idx!
          set-quiet-head!
          set-tactical-head!
@@ -103,32 +104,23 @@
 
     b))
 
+(define-inline (file-rank->idx file rank)
+  (+ 21 file (* rank 10)))
+
+;; Return the index of the EP square for the previous move.
+(define (get-ep-idx b)
+  (vector-ref (board-ep-idx b) (board-depth b)))
+
+(define (idx->pos idx)
+  (vector-ref positions idx))
+
 (define (init-moves! b)
   (let ([ d (board-depth b) ])
     (vector-set! (board-quiet-head b) d -1)
     (vector-set! (board-tactical-head b) d -1)))
 
-(define-inline (file-rank->idx file rank)
-  (+ 21 file (* rank 10)))
-
 (define (pos->idx pos)
   (vector-member pos positions))
-
-(define (idx->pos idx)
-  (vector-ref positions idx))
-
-;; Return the index of the EP square for one depth above i.e. the one
-;; set w/ the previous move.
-(define (get-ep-idx b)
-  (let ([ d (sub1 (board-depth b)) ])
-    (if (< d 0)
-        0
-        (vector-ref (board-ep-idx b) d))))
-
-(define (set-ep-idx! b v [d #f])
-  (vector-set! (board-ep-idx b)
-               (if d d (board-depth b))
-               v))
 
 (define (quiet-head b [ d #f ])
   (vector-ref (board-quiet-head b)
@@ -137,6 +129,18 @@
 (define (quiet-moves b [ d #f ])
   (vector-ref (board-quiet-moves b)
               (if d d (board-depth b))))
+
+(define (reset-depth! b)
+  (let ([ ep-idx (get-ep-idx b) ])
+    (set-board-depth! b 0)
+    (set-ep-idx! b ep-idx)))
+
+(define (set-ep-idx! b v [delta #f])
+  (vector-set! (board-ep-idx b)
+               (if delta
+                   (+ delta (board-depth b))
+                   (board-depth b))
+               v))
 
 (define (set-quiet-head! b v [ d #f ])
   (vector-set! (board-quiet-head b)
@@ -160,10 +164,86 @@
   (require rackunit)
 
   ;; ------------------------------------------------------------------------------------------
+  ;; create-board
+  ;; ------------------------------------------------------------------------------------------
+
+  (let ([ b (create-board) ])
+    ;; depth
+    (check-equal? (board-depth b) 0)
+
+    ;; squares
+    (check-equal? (bytes-length (board-squares b)) (* 10 12))
+
+    ;; whites-move?
+    (check-not-false (board-whites-move? b))
+
+    ;; black-king-idx
+    (check-equal? (board-black-king-idx b) 25)
+
+    ;; white-king-idx
+    (check-equal? (board-white-king-idx b) 95)
+
+    ;; full-move
+    (check-equal? (board-full-move b) 1)
+
+    ;; ep-idx
+    (check-equal? (vector-length (board-ep-idx b)) max-depth)
+    (for ([ i (in-range max-depth) ])
+      (set-board-depth! b i)
+      (check-equal? (get-ep-idx b) 0))
+    (set-board-depth! b 0)
+
+    ;; moves
+    (check-equal? (vector-length (board-quiet-head b)) max-depth)
+    (check-equal? (vector-length (board-quiet-moves b)) max-depth)
+    (check-equal? (vector-length (board-tactical-head b)) max-depth)
+    (check-equal? (vector-length (board-tactical-moves b)) max-depth)
+    (for ([ i (in-range max-depth) ])
+      (check-equal? (vector-ref (board-quiet-head b) i) -1)
+      (check-equal? (vector-ref (board-tactical-head b) i) -1)
+      (check-equal? (vector-length (vector-ref (board-quiet-moves b) i)) max-moves)
+      (check-equal? (vector-length (vector-ref (board-tactical-moves b) i)) max-moves)))
+
+  ;; ------------------------------------------------------------------------------------------
+  ;; file-rank->idx
+  ;; ------------------------------------------------------------------------------------------
+
+  (check-equal? (file-rank->idx 0 0) 21)
+  (check-equal? (file-rank->idx 7 0) 28)
+  (check-equal? (file-rank->idx 0 7) 91)
+  (check-equal? (file-rank->idx 7 7) 98)
+
+  ;; ------------------------------------------------------------------------------------------
+  ;; init-moves!
+  ;; ------------------------------------------------------------------------------------------
+
+  (let ([ b (create-board) ])
+    (vector-set! (board-quiet-head b) 0 7)
+    (vector-set! (board-tactical-head b) 0 8)
+    (check-not-equal? (vector-ref (board-quiet-head b) 0) -1)
+    (check-not-equal? (vector-ref (board-tactical-head b) 0) -1)
+    (init-moves! b)
+    (check-equal? (vector-ref (board-quiet-head b) 0) -1)
+    (check-equal? (vector-ref (board-tactical-head b) 0) -1))
+
+  ;; ------------------------------------------------------------------------------------------
   ;; pos->idx / idx->pos
   ;; ------------------------------------------------------------------------------------------
+
   (for ([ pair (in-list '(("a8" 21) ("h8" 28) ("a8" 21) ("a1" 91) ("h1" 98))) ])
     (check-equal? (pos->idx (first pair)) (second pair))
     (check-equal? (idx->pos (second pair)) (first pair)))
+
+  ;; ------------------------------------------------------------------------------------------
+  ;; reset-depth!
+  ;; ------------------------------------------------------------------------------------------
+
+  (let ([ b   (create-board)  ]
+        [ idx (pos->idx "e3") ])
+    (set-board-depth! b 7)
+    (set-ep-idx! b idx)
+    (reset-depth! b)
+    (check-equal? (board-depth b) 0)
+    (check-equal? (get-ep-idx b) idx))
 
   )

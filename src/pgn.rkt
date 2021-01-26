@@ -56,7 +56,7 @@
 
 (define (make-pgn-move! b str)
   (make-move! b (pgn-move b str))
-  (set-board-depth! b 0))
+  (reset-depth! b))
 
 (define (pgn-move b str)
   (let loop ([ lst pat-func ])
