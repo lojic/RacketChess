@@ -4,6 +4,7 @@
 (require "./board-funcs.rkt")
 (require "./move.rkt")
 (require "./piece.rkt")
+(require debug/repl)
 
 (provide generate-bishop-moves!
          generate-king-moves!
@@ -34,18 +35,20 @@
   (generate-castle-moves! b idx piece))
 
 (define (generate-castle-moves! b idx piece)
-  (when (not (has-moved? piece))
+  (when (not (has-moved? piece)) ; King has not moved
     (let ([ squares (board-squares b) ])
       (let ([ kr (bytes-ref squares (+ idx 3)) ]
             [ qr (bytes-ref squares (- idx 4)) ])
         ;; King side
-        (when (and (not (has-moved? kr))
+        (when (and (is-rook? kr)
+                   (not (has-moved? kr))
                    (= empty-square (bytes-ref squares (+ idx 1)))
                    (= empty-square (bytes-ref squares (+ idx 2))))
           (add-quiet-move! b
                            (create-move piece idx (+ idx 2) #:is-castle-kingside? #t)))
         ;; Queen side
-        (when (and (not (has-moved? qr))
+        (when (and (is-rook? qr)
+                   (not (has-moved? qr))
                    (= empty-square (bytes-ref squares (- idx 1)))
                    (= empty-square (bytes-ref squares (- idx 2))))
           (add-quiet-move! b
@@ -84,7 +87,7 @@
                                    (create-move piece idx target-idx #:captured-piece target)) ])))))
 
 (define (generate-pawn-moves! b idx piece)
-  (let-values ([ (is-white? n1-idx n2-idx nw-idx w-idx ne-idx e-idx min8th max8th)
+  (let-values ([ (white? n1-idx n2-idx nw-idx w-idx ne-idx e-idx min8th max8th)
                  (if (is-white? piece)
                      (values #t
                              (+ idx north)
@@ -106,14 +109,15 @@
            [ n1      (bytes-ref squares n1-idx) ]
            [ n2      (bytes-ref squares n2-idx) ]
            [ nw      (bytes-ref squares nw-idx) ]
-           [ ne      (bytes-ref squares ne-idx) ])
+           [ ne         (bytes-ref squares ne-idx) ]
+           [ last-rank? (and (>= n1-idx min8th) (<= n1-idx max8th)) ])
 
       ;; Single push
       (when (= n1 empty-square)
-        (if (and (>= n1-idx min8th) (<= n1-idx max8th))
+        (if last-rank?
             ;; Quiet promotions
-            (generate-quiet-promotions! b piece idx n1-idx)
-            
+            (generate-quiet-promotions! b white? piece idx n1-idx)
+
             ;; Regular single push
             (add-quiet-move! b (create-move piece idx n1-idx)))
 
@@ -124,77 +128,81 @@
 
       ;; Capture north west
       (cond [ (is-other-piece? piece nw)
-              (add-tactical-move! b (create-move piece idx nw-idx #:captured-piece nw))
-              (generate-capture-promotions! b piece idx nw-idx nw) ]
+              (if last-rank?
+                  (generate-capture-promotions! b white? piece idx nw-idx nw)
+                  (add-tactical-move! b (create-move piece idx nw-idx #:captured-piece nw))) ]
             [ (= (get-ep-idx b) nw-idx)
+              ;; En passant capture
               (add-tactical-move! b
                                  (create-move piece idx nw-idx
                                               #:captured-piece (bytes-ref squares w-idx) #:is-ep-capture? #t)) ])
 
       ;; Capture north east
       (cond [ (is-other-piece? piece ne)
-              (add-tactical-move! b (create-move piece idx ne-idx #:captured-piece ne))
-              (generate-capture-promotions! b piece idx ne-idx ne) ]
+              (if last-rank?
+                  (generate-capture-promotions! b white? piece idx ne-idx ne)
+                  (add-tactical-move! b (create-move piece idx ne-idx #:captured-piece ne))) ]
             [ (= (get-ep-idx b) ne-idx)
+              ;; En passant capture
               (add-tactical-move! b
                                  (create-move piece idx ne-idx
                                               #:captured-piece (bytes-ref squares e-idx) #:is-ep-capture? #t)) ]))))
 
 ;; Even though it's a quiet promotion, we add tactical moves since a
 ;; promotion is a great move.
-(define (generate-quiet-promotions! b piece idx dst-idx)
+(define (generate-quiet-promotions! b white? piece idx dst-idx)
   ;; Promotion to queen
   (add-tactical-move! b
                    (create-move piece idx dst-idx
-                                #:promoted-piece (if is-white?
+                                #:promoted-piece (if white?
                                                      white-queen
                                                      black-queen)))
   ;; Promotion to rook
   (add-tactical-move! b
                    (create-move piece idx dst-idx
-                                #:promoted-piece (if is-white?
+                                #:promoted-piece (if white?
                                                      white-rook
                                                      black-rook)))
   ;; Promotion to knight
   (add-tactical-move! b
                    (create-move piece idx dst-idx
-                                #:promoted-piece (if is-white?
+                                #:promoted-piece (if white?
                                                      white-knight
                                                      black-knight)))
   ;; Promotion to bishop
   (add-tactical-move! b
                    (create-move piece idx dst-idx
-                                #:promoted-piece (if is-white?
+                                #:promoted-piece (if white?
                                                      white-bishop
                                                      black-bishop))))
 
-(define (generate-capture-promotions! b piece idx dst-idx captured)
+(define (generate-capture-promotions! b white? piece idx dst-idx captured)
   ;; Promotion to queen
   (add-tactical-move! b
                    (create-move piece idx dst-idx
                                 #:captured-piece captured
-                                #:promoted-piece (if is-white?
+                                #:promoted-piece (if white?
                                                      white-queen
                                                      black-queen)))
   ;; Promotion to rook
   (add-tactical-move! b
                    (create-move piece idx dst-idx
                                 #:captured-piece captured
-                                #:promoted-piece (if is-white?
+                                #:promoted-piece (if white?
                                                      white-rook
                                                      black-rook)))
   ;; Promotion to knight
   (add-tactical-move! b
                    (create-move piece idx dst-idx
                                 #:captured-piece captured
-                                #:promoted-piece (if is-white?
+                                #:promoted-piece (if white?
                                                      white-knight
                                                      black-knight)))
   ;; Promotion to bishop
   (add-tactical-move! b
                    (create-move piece idx dst-idx
                                 #:captured-piece captured
-                                #:promoted-piece (if is-white?
+                                #:promoted-piece (if white?
                                                      white-bishop
                                                      black-bishop))))
 
@@ -221,14 +229,17 @@
   (generate-sliding-moves! b idx piece west))
 
 (define (print-move m)
-  (printf "~a~a~a~a\n"
+  (printf "~a~a~a~a"
           (piece-symbol (move-src m))
           (idx->pos (move-src-idx m))
           (if (move-captured-piece m)
               "x"
               "-")
-          (idx->pos (move-dst-idx m))
-          ))
+          (idx->pos (move-dst-idx m)))
+  (let ([ promoted (move-promoted-piece m) ])
+    (when promoted
+      (printf "=~a" (piece-symbol promoted))))
+  (printf "\n"))
 
 (define (print-moves b)
   ;; Tactical moves

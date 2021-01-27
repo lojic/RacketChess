@@ -9,9 +9,11 @@
          unmake-move!)
 
 (define e2 (+ east east))
+(define e3 (+ east east east))
 (define n2 (+ north north))
 (define s2 (+ south south))
 (define w2 (+ west west))
+(define w4 (+ west west west west))
 
 (define (make-move! b m)
   (let* ([ squares (board-squares b)           ]
@@ -48,25 +50,23 @@
   ;; Handle castling
   (let ([ dist (- dst-idx src-idx) ])
     (cond [ (= dist e2)
-
-            ;; Move rook
+            ;; Move king side rook
             (bytes-set! squares
                         (+ src-idx east)
-                        (bitwise-ior (bytes-ref squares (+ src-idx (* 3 east)))
+                        (bitwise-ior (bytes-ref squares (+ src-idx e3))
                                      piece-moved-bit))
             (bytes-set! squares
-                        (+ src-idx (* 3 east))
+                        (+ src-idx e3)
                         empty-square) ]
 
           [ (= dist w2)
-
-            ;; Move rook
+            ;; Move queenside rook
             (bytes-set! squares
                         (+ src-idx west)
-                        (bitwise-ior (bytes-ref squares (+ src-idx (* 4 west)))
+                        (bitwise-ior (bytes-ref squares (+ src-idx w4))
                                      piece-moved-bit))
             (bytes-set! squares
-                        (+ src-idx (* 4 west))
+                        (+ src-idx w4)
                         empty-square) ])
 
     piece))
@@ -148,21 +148,27 @@
     ;; Reset EP square for one level down
     (set-ep-idx! b 0 1)))
 
-
 (define (unmake-king-move! b squares m white? piece src-idx)
   ;; Revert king idx
   (if white?
       (set-board-white-king-idx! b src-idx)
       (set-board-black-king-idx! b src-idx))
 
-  ;; Handle un-castling
+  ;; Handle un-castling. Since the rook must've had the moved bit
+  ;; unset before the castle, we'll unset it after undoing the
+  ;; castle. We don't need to do this for the king since we store the
+  ;; source piece in the move.
   (cond [ (move-is-castle-kingside? m)
           ;; Move rook back
-          (bytes-set! squares (+ src-idx (* 3 east)) (bytes-ref squares (+ src-idx east)))
+          (bytes-set! squares
+                      (+ src-idx e3)
+                      (bitwise-and (bytes-ref squares (+ src-idx east)) piece-moved-mask))
           (bytes-set! squares (+ src-idx east) empty-square) ]
         [ (move-is-castle-queenside? m)
           ;; Move rook back
-          (bytes-set! squares (+ src-idx (* 4 west)) (bytes-ref squares (+ src-idx west)))
+          (bytes-set! squares
+                      (+ src-idx w4)
+                      (bitwise-and (bytes-ref squares (+ src-idx west)) piece-moved-mask))
           (bytes-set! squares (+ src-idx west) empty-square) ]))
 
 (define (print-board b #:full? [ full? #f ])

@@ -26,6 +26,7 @@
          is-white?
          is-white-king?
          piece-moved-bit
+         piece-moved-mask
          piece-symbol
          piece-type
          piece-value
@@ -58,6 +59,7 @@
 (define color-bits            #b11000000)
 (define guard-square          #b11111111) ; Note: both black and white bits are set purposely :)
 (define piece-moved-bit       #b00001000)
+(define piece-moved-mask      #b11110111)
 (define piece-type-bits       #b00000111)
 (define piece-type-color-bits #b11000111)
 (define white-bit             #b10000000)

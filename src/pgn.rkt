@@ -8,7 +8,6 @@
 (require "./move.rkt")
 (require "./movement.rkt")
 (require threading)
-(require debug/repl)
 
 (provide make-pgn-move!
          pgn-load-file!
@@ -59,14 +58,36 @@
   (reset-depth! b))
 
 (define (pgn-move b str)
+  (define moves (generate-moves b))
   (let loop ([ lst pat-func ])
     (if (null? lst)
         (error "pgn-move: no pattern found for move")
         (match-let* ([ (list pat func) (car lst)              ]
                      [ groups          (regexp-match pat str) ])
           (if groups
-              (func b (board-whites-move? b) (cdr groups))
+              (let ([ m (func b (board-whites-move? b) (cdr groups)) ])
+                (if (member m moves)
+                    m
+                    (begin
+                      (println m)
+                      (for ([ mv (in-list moves) ])
+                        (print-move mv))
+                      (error "Move not in generated list"))))
               (loop (cdr lst)))))))
+
+(define (generate-moves b)
+  (init-moves! b)
+  (generate-moves! b)
+  (let ([ result (append (get-moves b tactical-head tactical-moves)
+                         (get-moves b quiet-head quiet-moves)) ])
+    (init-moves! b)
+    result))
+
+(define (get-moves b head moves)
+  (let loop ([ i 0 ][ result '() ])
+    (if (> i (head b))
+        result
+        (loop (add1 i) (cons (vector-ref (moves b) i) result)))))
 
 ;; groups is of the form:
 ;; '(<from file>  (optional) indication of source file when capturing e.g. "cx"
