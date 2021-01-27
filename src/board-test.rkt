@@ -3,6 +3,7 @@
 (module+ test
   (require "./board.rkt"
            "./board-funcs.rkt"
+           "./evaluation.rkt"
            "./piece.rkt"
            "./fen.rkt")
 

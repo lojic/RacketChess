@@ -84,19 +84,23 @@
                                    (create-move piece idx target-idx #:captured-piece target)) ])))))
 
 (define (generate-pawn-moves! b idx piece)
-  (let-values ([ (is-white? n1-idx n2-idx nw-idx ne-idx min8th max8th)
+  (let-values ([ (is-white? n1-idx n2-idx nw-idx w-idx ne-idx e-idx min8th max8th)
                  (if (is-white? piece)
                      (values #t
                              (+ idx north)
                              (+ idx north north)
                              (+ idx north-west)
+                             (+ idx west)
                              (+ idx north-east)
+                             (+ idx east)
                              21 28)
                      (values #f
                              (+ idx south)
                              (+ idx south south)
                              (+ idx south-west)
+                             (+ idx west)
                              (+ idx south-east)
+                             (+ idx east)
                              91 98)) ])
     (let* ([ squares (board-squares b)          ]
            [ n1      (bytes-ref squares n1-idx) ]
@@ -127,7 +131,7 @@
             [ (= (get-ep-idx b) nw-idx)
               (add-tactical-move! b
                                  (create-move piece idx nw-idx
-                                              #:captured-piece nw #:is-ep-capture? #t)) ])
+                                              #:captured-piece (bytes-ref squares w-idx) #:is-ep-capture? #t)) ])
 
       ;; Capture north east
       (cond [ (is-other-piece? piece ne)
@@ -135,7 +139,7 @@
             [ (= (get-ep-idx b) ne-idx)
               (add-tactical-move! b
                                  (create-move piece idx ne-idx
-                                              #:captured-piece ne #:is-ep-capture? #t)) ]))))
+                                              #:captured-piece (bytes-ref squares e-idx) #:is-ep-capture? #t)) ]))))
 
 (define (generate-sliding-moves! b idx piece direction)
   (let loop ([ target-idx (+ idx direction) ])

@@ -8,7 +8,8 @@
          "./piece.rkt")
 
 (provide board->fen
-         fen->board)
+         fen->board
+         initial-fen)
 
 (define initial-fen "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
 

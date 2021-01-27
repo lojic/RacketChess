@@ -4,34 +4,14 @@
 (require "./piece.rkt")
 (require "./move.rkt")
 
-(provide evaluate
-         make-move!
+(provide make-move!
          print-board
          unmake-move!)
 
-(define n2 (+ north north))
 (define e2 (+ east east))
+(define n2 (+ north north))
 (define s2 (+ south south))
 (define w2 (+ west west))
-
-(define (evaluate b)
-  (for*/sum ([ rank (in-range 8) ]
-             [ file (in-range 8) ])
-    (let* ([ idx   (file-rank->idx file rank)        ]
-           [ piece (bytes-ref (board-squares b) idx) ])
-      (cond [ (is-pawn? piece)  (evaluate-pawn b piece idx) ]
-            [ (is-piece? piece) (piece-value piece)         ]
-            [ else              0.0                         ]))))
-
-;; Not sure if this is a good idea, but give the 4 center positions
-;; higher value to encourage controlling the center.
-(define (evaluate-pawn b piece idx)
-  (let ([ val (piece-value piece) ])
-    (cond [ (= idx 64) (* val 1.02) ]
-          [ (= idx 65) (* val 1.02) ]
-          [ (= idx 54) (* val 1.02) ]
-          [ (= idx 55) (* val 1.02) ]
-          [ else       val          ])))
 
 (define (make-move! b m)
   (let* ([ squares (board-squares b)           ]
@@ -46,7 +26,8 @@
                   [ (is-king? piece)
                     (make-king-move! b squares m white? piece src-idx dst-idx) ]
                   [ else piece ])])
-      ;; Move
+
+      ;; Move the piece
       (bytes-set! squares dst-idx (bitwise-ior piece piece-moved-bit))
       (bytes-set! squares src-idx empty-square)
 
@@ -68,7 +49,6 @@
   (let ([ dist (- dst-idx src-idx) ])
     (cond [ (= dist e2)
 
-            (set-move-is-castle-kingside?! m #t)
             ;; Move rook
             (bytes-set! squares
                         (+ src-idx east)
@@ -80,7 +60,6 @@
 
           [ (= dist w2)
 
-            (set-move-is-castle-queenside?! m #t)
             ;; Move rook
             (bytes-set! squares
                         (+ src-idx west)
@@ -95,12 +74,19 @@
 ;; Returns the source piece (possibly modified)
 (define (make-pawn-move! b squares m white? piece src-idx dst-idx)
   (let ([ dist (- dst-idx src-idx) ])
+
+    ;; NOTE: the cond clauses are mutually exclusive, only one of them
+    ;;       could occur:
+    ;; * Pawn has moved 2 spaces
+    ;; * Pawn has performed an en passant capture
+    ;; * Pawn has reached the last rank and was promoted
+    ;; * None of the above
     (cond
      ;; If a pawn has moved 2 spaces, record the en
      ;; passant capture idx
      [ (or (= dist n2) (= dist s2))
-       ;; Set the EP target
-       (set-ep-idx! b (+ src-idx (arithmetic-shift dist -1)))
+       ;; Set the EP target on the next level down
+       (set-ep-idx! b (+ src-idx (arithmetic-shift dist -1)) 1)
        piece ]
 
      ;; Handle en passant capture
@@ -112,17 +98,21 @@
          (bytes-set! squares target empty-square))
        piece ]
 
-     ;; Handle promotion
+     ;; Handle promotion - return the promoted piece instead of the
+     ;; pawn. Mark the piece as having moved.
      [ (move-promoted-piece m)
-       (move-promoted-piece m) ]
+       (bitwise-ior (move-promoted-piece m) piece-moved-bit) ]
 
-     ;; Nothing applies, just return the piece
+     ;; None of the above, just return the piece
      [ else piece ])))
 
 (define (unmake-move! b m)
   ;; Decrement depth & move-i
   (set-board-depth! b (sub1 (board-depth b)))
   (set-board-move-i! b (sub1 (board-move-i b)))
+
+  ;; Player to move
+  (set-board-whites-move?! b (not (board-whites-move? b)))
 
   (let* ([ squares        (board-squares b)       ]
          [ white?         (board-whites-move? b)  ]
@@ -133,7 +123,8 @@
 
     ;; Move piece back to src position. Since we stored the piece in
     ;; the move, when we place it back at the src position, we restore
-    ;; any modified bits also.
+    ;; any modified bits also. This also undoes a promotion since the
+    ;; src piece will be a pawn.
     (bytes-set! squares src-idx piece)
 
     (if captured-piece
@@ -154,11 +145,9 @@
     (when (is-king? piece)
       (unmake-king-move! b squares m white? piece src-idx))
 
-    ;; Reset EP square
-    (set-ep-idx! b 0)
+    ;; Reset EP square for one level down
+    (set-ep-idx! b 0 1)))
 
-    ;; Player to move
-    (set-board-whites-move?! b (not (board-whites-move? b)))))
 
 (define (unmake-king-move! b squares m white? piece src-idx)
   ;; Revert king idx

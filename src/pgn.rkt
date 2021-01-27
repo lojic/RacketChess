@@ -75,13 +75,26 @@
 ;;   <promotion>  (optional) e.g. "=N"
 ;;   <check>)     (optional) indication of check e.g. "+" or "#" for mate
 (define (pgn-pawn-move b white? groups)
+  (define (get-promoted-piece letter)
+    (if white?
+        (match letter
+          [ "Q" white-queen  ]
+          [ "B" white-bishop ]
+          [ "N" white-knight ]
+          [ "R" white-rook   ])
+        (match letter
+          [ "Q" black-queen  ]
+          [ "B" black-bishop ]
+          [ "N" black-knight ]
+          [ "R" black-rook   ])))
+
   (match-let* ([ (list from-file to-file to-rank promotion check) groups ]
                [ from-file (if (non-empty-string? from-file)
                                (substring from-file 0 1)
                                #f) ]
                [ to-rank (string->number to-rank) ]
                [ promoted (if (non-empty-string? promotion)
-                              (substring promotion 1 2)
+                              (get-promoted-piece (substring promotion 1 2))
                               #f) ])
     (if from-file
         (pgn-pawn-capture b white? from-file to-file to-rank promoted)
@@ -101,25 +114,17 @@
         ;; En passant capture
         (let* ([ cap-idx   (pos->idx (format "~a~a" to-file src-rank)) ]
                [ cap-piece (bytes-ref squares cap-idx)                 ])
-          (create-move src src-idx dst-idx #:captured-piece cap-piece #:is-ep-capture? #t))
+          (create-move src src-idx dst-idx
+                       #:captured-piece cap-piece
+                       #:is-ep-capture? #t
+                       #:promoted-piece promoted))
         ;; Regular capture
-        (create-move src src-idx dst-idx #:captured-piece dst))))
+        (create-move src src-idx dst-idx
+                     #:captured-piece dst
+                     #:promoted-piece promoted))))
 
 (define (pgn-pawn-push b white? to-file to-rank promoted)
   (define squares (board-squares b))
-
-  (define (get-promoted-piece)
-    (if white?
-        (match promoted
-          [ "Q" white-queen  ]
-          [ "B" white-bishop ]
-          [ "N" white-knight ]
-          [ "R" white-rook   ])
-        (match promoted
-          [ "Q" black-queen  ]
-          [ "B" black-bishop ]
-          [ "N" black-knight ]
-          [ "R" black-rook   ])))
 
   (let* ([ dst-idx (pos->idx (format "~a~a" to-file to-rank))               ]
          [ dst     (bytes-ref squares dst-idx)                              ]
@@ -134,7 +139,7 @@
             (create-move s2 s2-idx dst-idx) ]
           [ (and promoted s1-ok (= to-rank (if white? 8 1)))
             ;; Promotion push
-            (create-move s1 s1-idx dst-idx #:promoted-piece (get-promoted-piece)) ]
+            (create-move s1 s1-idx dst-idx #:promoted-piece promoted) ]
           [ s1-ok
             ;; Regular single push
             (create-move s1 s1-idx dst-idx) ]

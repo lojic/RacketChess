@@ -81,7 +81,7 @@
    "  " "  " "  " "  " "  " "  " "  " "  " "  " "  "   ; 100 - 109
    "  " "  " "  " "  " "  " "  " "  " "  " "  " "  ")) ; 120 - 119
 
-(define max-depth 100)
+(define max-depth 200)
 (define max-moves 250)
 
 (define (create-board)
@@ -137,10 +137,14 @@
 (define (reset-depth! b)
   (set-board-depth! b 0))
 
-(define (set-ep-idx! b v)
-  (vector-set! (board-ep-idx b)
-               (board-move-i b)
-               v))
+(define (set-ep-idx! b v [delta #f])
+  (if delta
+      (vector-set! (board-ep-idx b)
+                   (+ (board-move-i b) delta)
+                   v)
+      (vector-set! (board-ep-idx b)
+                   (board-move-i b)
+                   v)))
 
 (define-inline (set-full-move! b full-move blacks-move?)
   (if blacks-move?
