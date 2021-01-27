@@ -30,7 +30,26 @@
   (generate-sliding-moves! b idx piece north-west))
 
 (define (generate-king-moves! b idx piece)
-  (generate-offset-moves! b idx piece king-offsets))
+  (generate-offset-moves! b idx piece king-offsets)
+  (generate-castle-moves! b idx piece))
+
+(define (generate-castle-moves! b idx piece)
+  (when (not (has-moved? piece))
+    (let ([ squares (board-squares b) ])
+      (let ([ kr (bytes-ref squares (+ idx 3)) ]
+            [ qr (bytes-ref squares (- idx 4)) ])
+        ;; King side
+        (when (and (not (has-moved? kr))
+                   (= empty-square (bytes-ref squares (+ idx 1)))
+                   (= empty-square (bytes-ref squares (+ idx 2))))
+          (add-quiet-move! b
+                           (create-move piece idx (+ idx 2) #:is-castle-kingside? #t)))
+        ;; Queen side
+        (when (and (not (has-moved? qr))
+                   (= empty-square (bytes-ref squares (- idx 1)))
+                   (= empty-square (bytes-ref squares (- idx 2))))
+          (add-quiet-move! b
+                           (create-move piece idx (- idx 2) #:is-castle-queenside? #t)))))))
 
 (define (generate-knight-moves! b idx piece)
   (generate-offset-moves! b idx piece knight-offsets))
