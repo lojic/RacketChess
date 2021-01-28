@@ -11,9 +11,12 @@
 (require "./piece.rkt")
 (require debug/repl)
 
+(define MIN-SCORE -1000.0)
+(define MAX-SCORE 1000.0)
+
 (define (search b max-level)
   (set-board-depth! b 0)
-  (alpha-beta! b max-level -inf.0 +inf.0))
+  (alpha-beta! b max-level MIN-SCORE MAX-SCORE))
 
 (define (move-iterator! b)
   (generate-moves! b)
@@ -45,11 +48,23 @@
           (let ([ m (get-move) ])
             (if (or (not m) (>= alpha beta))
                 ;; No more moves, or alpha >= beta
+
+                ;; If we're at the top level, return move & score;
+                ;; otherwise, just score. If no move was found, mate
+                ;; is implied. Adjust the score by depth to favor
+                ;; shorter mates to prevent the program from just
+                ;; gobbling up pieces instead of going for the mate!
                 (if maximizing
-                    ;; If we're at the top level, return move & score;
-                    ;; otherwise, just score
-                    (if (= depth 0) (cons alpha move) alpha)
-                    (if (= depth 0) (cons beta move)  beta))
+                    (if (= depth 0)
+                        (cons alpha move)
+                        (if move
+                            alpha
+                            (+ MIN-SCORE depth)))
+                    (if (= depth 0)
+                        (cons beta move)
+                        (if move
+                            beta
+                            (- MAX-SCORE depth))))
                 (begin
                   (make-move! b m)
                   (if (is-legal? b m)
@@ -119,5 +134,6 @@
         (make-human-move! b))))
 
 (module+ main
+  ;;(game 7 #f "3Q4/1p2N1pk/5p1p/7P/1Pn5/5pP1/5r2/5RK1 w - - 0 1")
   (game 7 #f)
   )
