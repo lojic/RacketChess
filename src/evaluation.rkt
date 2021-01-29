@@ -7,8 +7,6 @@
 
 (provide evaluate)
 
-;; For now, simply sum the piece values, and give slight preference
-;; for pawns in the center.
 (define (evaluate b)
   (for*/sum ([ rank (in-range 8) ]
              [ file (in-range 8) ])
@@ -48,6 +46,7 @@
       val))
 
 (define-inline (evaluate-pawn white? val idx)
+  ;; Slightly higher value for pawns on a center square
   (if white?
       (if (or (= idx 64) (= idx 65))
           (+ val 0.05)
