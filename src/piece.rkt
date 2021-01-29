@@ -129,6 +129,10 @@
 (define-inline (is-knight? piece)
   (= (bitwise-and piece piece-type-bits) knight-bits))
 
+(define-inline (is-major? piece)
+  (> (bitwise-and piece piece-type-bits)
+     1))
+
 (define-inline (is-other-color? p1 p2)
   (= (bitwise-ior (bitwise-and p1 color-bits)
                   (bitwise-and p2 color-bits))
@@ -221,6 +225,24 @@
   (check-not-false (is-white? white-pawn))
   (check-not-false (is-white? white-queen))
   (check-not-false (is-white? white-rook))
+
+  ;; is-major? --------------------------------------------------------------------------------
+
+  (check-not-false (is-major? black-bishop))
+  (check-not-false (is-major?   black-king))
+  (check-not-false (is-major? black-knight))
+  (check-not-false (is-major?  black-queen))
+  (check-not-false (is-major?   black-rook))
+
+  (check-not-false (is-major? white-bishop))
+  (check-not-false (is-major?   white-king))
+  (check-not-false (is-major? white-knight))
+  (check-not-false (is-major?  white-queen))
+  (check-not-false (is-major?   white-rook))
+
+  (check-false (is-major? black-pawn))
+  (check-false (is-major? white-pawn))
+  (check-false (is-major? empty-square))
 
   ;; ------------------------------------------------------------------------------------------
   ;; is-<piece>? predicates
