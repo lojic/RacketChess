@@ -101,6 +101,7 @@
             (make-move! b m)
             (print-board b #:full? #t)
             (print-move m)
+            (printf "Score: ~a\n" score)
             (displayln "")
             (make-human-move! b)
             (loop))
@@ -134,6 +135,11 @@
         (make-human-move! b))))
 
 (module+ main
-  ;;(game 7 #f "3Q4/1p2N1pk/5p1p/7P/1Pn5/5pP1/5r2/5RK1 w - - 0 1")
-  (game 7 #f)
-  )
+  (let ([ computer-plays-black?
+          (let loop ()
+            (displayln "Computer plays white or black? (w or b): ")
+            (let ([ player (read-line) ])
+              (cond [ (string=? player "w") #f ]
+                    [ (string=? player "b") #t ]
+                    [ else (loop) ]))) ])
+    (game 6 computer-plays-black?)))
