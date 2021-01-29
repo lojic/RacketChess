@@ -50,7 +50,8 @@
         (when (and (is-rook? qr)
                    (not (has-moved? qr))
                    (= empty-square (bytes-ref squares (- idx 1)))
-                   (= empty-square (bytes-ref squares (- idx 2))))
+                   (= empty-square (bytes-ref squares (- idx 2)))
+                   (= empty-square (bytes-ref squares (- idx 3))))
           (add-quiet-move! b
                            (create-move piece idx (- idx 2) #:is-castle-queenside? #t)))))))
 
