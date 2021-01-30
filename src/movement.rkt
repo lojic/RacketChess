@@ -18,7 +18,7 @@
 ;; Public Interface
 ;; --------------------------------------------------------------------------------------------
 
-(define (generate-moves! b)
+(define (generate-moves! b #:quiet-moves? [ quiet-moves? #t ])
   (define is-white? (board-whites-move? b))
 
   (init-moves! b)
@@ -29,35 +29,36 @@
            [ piece (bytes-ref (board-squares b) idx) ])
       (when (is-right-color-piece? piece is-white?)
         (match (piece-type piece)
-          [ #b001 (generate-pawn-moves! b idx piece)   ]
-          [ #b010 (generate-knight-moves! b idx piece) ]
-          [ #b011 (generate-bishop-moves! b idx piece) ]
-          [ #b100 (generate-rook-moves! b idx piece)   ]
-          [ #b101 (generate-queen-moves! b idx piece)  ]
-          [ #b110 (generate-king-moves! b idx piece)   ])))))
+          [ #b001 (generate-pawn-moves!   b idx piece #:quiet-moves? quiet-moves) ]
+          [ #b010 (generate-knight-moves! b idx piece #:quiet-moves? quiet-moves) ]
+          [ #b011 (generate-bishop-moves! b idx piece #:quiet-moves? quiet-moves) ]
+          [ #b100 (generate-rook-moves!   b idx piece #:quiet-moves? quiet-moves) ]
+          [ #b101 (generate-queen-moves!  b idx piece #:quiet-moves? quiet-moves) ]
+          [ #b110 (generate-king-moves!   b idx piece #:quiet-moves? quiet-moves) ])))))
 
-(define (generate-bishop-moves! b idx piece)
-  (generate-sliding-moves! b idx piece north-east)
-  (generate-sliding-moves! b idx piece south-east)
-  (generate-sliding-moves! b idx piece south-west)
-  (generate-sliding-moves! b idx piece north-west))
+(define (generate-bishop-moves! b idx piece #:quiet-moves? [ quiet-moves? #t ])
+  (generate-sliding-moves! b idx piece north-east quiet-moves?)
+  (generate-sliding-moves! b idx piece south-east quiet-moves?)
+  (generate-sliding-moves! b idx piece south-west quiet-moves?)
+  (generate-sliding-moves! b idx piece north-west quiet-moves?))
 
-(define (generate-king-moves! b idx piece)
-  (generate-offset-moves! b idx piece king-offsets)
-  (generate-castle-moves! b idx piece))
+(define (generate-king-moves! b idx piece #:quiet-moves? [ quiet-moves? #t ])
+  (generate-offset-moves! b idx piece king-offsets quiet-moves?)
+  (when quiet-moves?
+    (generate-castle-moves! b idx piece)))
 
-(define (generate-knight-moves! b idx piece)
-  (generate-offset-moves! b idx piece knight-offsets))
+(define (generate-knight-moves! b idx piece #:quiet-moves? [ quiet-moves? #t ])
+  (generate-offset-moves! b idx piece knight-offsets quiet-moves?))
 
-(define (generate-queen-moves! b idx piece)
-  (generate-bishop-moves! b idx piece)
-  (generate-rook-moves! b idx piece))
+(define (generate-queen-moves! b idx piece #:quiet-moves? [ quiet-moves? #t ])
+  (generate-bishop-moves! b idx piece #:quiet-moves? quiet-moves)
+  (generate-rook-moves! b idx piece #:quiet-moves? quiet-moves))
 
-(define (generate-rook-moves! b idx piece)
-  (generate-sliding-moves! b idx piece north)
-  (generate-sliding-moves! b idx piece east)
-  (generate-sliding-moves! b idx piece south)
-  (generate-sliding-moves! b idx piece west))
+(define (generate-rook-moves! b idx piece #:quiet-moves? [ quiet-moves? #t ])
+  (generate-sliding-moves! b idx piece north quiet-moves?)
+  (generate-sliding-moves! b idx piece east quiet-moves?)
+  (generate-sliding-moves! b idx piece south quiet-moves?)
+  (generate-sliding-moves! b idx piece west quiet-moves?))
 
 (define (print-move m)
   (printf "~a~a~a~a"
@@ -107,18 +108,19 @@
           (add-quiet-move! b
                            (create-move piece idx (- idx 2) #:is-castle-queenside? #t)))))))
 
-(define (generate-offset-moves! b idx piece offsets)
+(define (generate-offset-moves! b idx piece offsets quiet-moves?)
   (let ([ squares (board-squares b) ])
     (for ([ offset (in-list offsets) ])
       (let* ([ target-idx (+ idx offset)                 ]
              [ target     (bytes-ref squares target-idx) ])
         (cond [ (= target empty-square)
-                (add-quiet-move! b (create-move piece idx target-idx)) ]
+                (when quiet-moves?
+                  (add-quiet-move! b (create-move piece idx target-idx))) ]
               [ (is-other-piece? piece target)
                 (add-tactical-move! b
                                    (create-move piece idx target-idx #:captured-piece target)) ])))))
 
-(define (generate-pawn-moves! b idx piece)
+(define (generate-pawn-moves! b idx piece #:quiet-moves? [ quiet-moves? #t ])
   (let-values ([ (white? n1-idx n2-idx nw-idx w-idx ne-idx e-idx min8th max8th)
                  (if (is-white? piece)
                      (values #t
@@ -144,8 +146,8 @@
            [ ne         (bytes-ref squares ne-idx) ]
            [ last-rank? (and (>= n1-idx min8th) (<= n1-idx max8th)) ])
 
-      ;; Single push
-      (when (= n1 empty-square)
+      (when (and (= n1 empty-square) quiet-moves?)
+        ;; Single push
         (if last-rank?
             ;; Quiet promotions
             (generate-quiet-promotions! b white? piece idx n1-idx)
@@ -157,6 +159,7 @@
         (when (and (not (has-moved? piece))
                    (= n2 empty-square))
           (add-quiet-move! b (create-move piece idx n2-idx))))
+
 
       ;; Capture north west
       (cond [ (is-other-piece? piece nw)
@@ -238,12 +241,13 @@
                                                      white-bishop
                                                      black-bishop))))
 
-(define (generate-sliding-moves! b idx piece direction)
+(define (generate-sliding-moves! b idx piece direction quiet-moves?)
   (let loop ([ target-idx (+ idx direction) ])
     (let ([ target (bytes-ref (board-squares b) target-idx) ])
       (cond [ (= target empty-square)
-              ;; Add quiet move and continue
-              (add-quiet-move! b (create-move piece idx target-idx))
+              (when quiet-moves?
+                ;; Add quiet move and continue
+                (add-quiet-move! b (create-move piece idx target-idx)))
               (loop (+ target-idx direction)) ]
             [ (is-other-piece? piece target)
               ;; Add tactical move for capture and exit
