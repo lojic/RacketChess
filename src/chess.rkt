@@ -13,13 +13,14 @@
 
 (define MIN-SCORE -1000.0)
 (define MAX-SCORE 1000.0)
+(define QUIESCE-LEVELS 2)
 
 (define (search b max-level)
   (set-board-depth! b 0)
   (alpha-beta! b max-level MIN-SCORE MAX-SCORE))
 
-(define (move-iterator! b)
-  (generate-moves! b)
+(define (move-iterator! b #:quiet-moves? [ quiet-moves? #t ])
+  (generate-moves! b #:quiet-moves? quiet-moves)
   (let ([ tmoves (tactical-moves b) ]
         [ thead  (tactical-head b)  ]
         [ ti     0                  ]
@@ -35,15 +36,41 @@
               (vector-ref qmoves (sub1 qi)) ]
             [ else #f ]))))
 
+(define (quiesce! b max-level alpha beta)
+  (define stand-pat (evaluate b))
+  (define depth     (board-depth b))
+  (define get-move  (move-iterator! b #:quiet-moves? #f))
+
+  (if (= depth max-level)
+      stand-pat
+      (if (>= stand-pat beta)
+          beta
+          (let loop ([ alpha (max alpha stand-pat) ])
+            (let ([ m (get-move) ])
+              (if (or (not m) (>= alpha beta))
+                  ;; No more moves, or alpha >= beta
+                  alpha
+                  (begin
+                    (make-move! b m)
+                    (if (is-legal? b m)
+                        ;; Legal move, continue
+                        (let ([ score (- (quiesce! b max-level (- beta) (- alpha))) ])
+                          (unmake-move! b m)
+                          (cond [ (>= score beta) beta         ]
+                                [ (> score alpha) (loop score) ]
+                                [ else            (loop alpha) ]))
+                        ;; Illegal move, ignore move
+                        (begin
+                          (unmake-move! b m)
+                          (loop alpha))))))))))
+
 (define (alpha-beta! b max-level alpha beta)
   (define depth (board-depth b))
 
   (if (= depth max-level)
-      (evaluate b)
-      (let ([ maximizing (board-whites-move? b) ]
-            [ get-move (move-iterator! b) ])
+      (quiesce! b (+ max-level QUIESCE-LEVELS) alpha beta)
+      (let ([ get-move (move-iterator! b) ])
         (let loop ([ alpha alpha ]
-                   [ beta  beta  ]
                    [ move  #f    ])
           (let ([ m (get-move) ])
             (if (or (not m) (>= alpha beta))
@@ -54,34 +81,24 @@
                 ;; is implied. Adjust the score by depth to favor
                 ;; shorter mates to prevent the program from just
                 ;; gobbling up pieces instead of going for the mate!
-                (if maximizing
-                    (if (= depth 0)
-                        (cons alpha move)
-                        (if move
-                            alpha
-                            (+ MIN-SCORE depth)))
-                    (if (= depth 0)
-                        (cons beta move)
-                        (if move
-                            beta
-                            (- MAX-SCORE depth))))
+                (if (= depth 0)
+                    (cons alpha move)
+                    (if move
+                        alpha
+                        (+ MIN-SCORE depth)))
                 (begin
                   (make-move! b m)
                   (if (is-legal? b m)
                       ;; Legal move, continue
-                      (let ([ score (alpha-beta! b max-level alpha beta) ])
+                      (let ([ score (- (alpha-beta! b max-level (- beta) (- alpha))) ])
                         (unmake-move! b m)
-                        (if maximizing
-                            (if (> score alpha)
-                                (loop score beta m)
-                                (loop alpha beta move))
-                            (if (< score beta)
-                                (loop alpha score m)
-                                (loop alpha beta move))))
+                        (cond [ (>= score beta) beta              ]
+                              [ (> score alpha) (loop score m)    ]
+                              [ else            (loop alpha move) ]))
                       ;; Illegal move, ignore move
                       (begin
                         (unmake-move! b m)
-                        (loop alpha beta move))))))))))
+                        (loop alpha move))))))))))
 
 (define (game depth computer-plays-black? [ fen #f ])
   (define b (if fen

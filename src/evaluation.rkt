@@ -7,21 +7,26 @@
 
 (provide evaluate)
 
+;; Switched to negamax, so return the score relative to the player
 (define (evaluate b)
-  (for*/sum ([ rank (in-range 8) ]
-             [ file (in-range 8) ])
-    (let* ([ idx    (file-rank->idx file rank)        ]
-           [ piece  (bytes-ref (board-squares b) idx) ])
-      (if (= piece empty-square)
-          0.0
-          (let ([ white? (is-white? piece)   ]
-                [ val    (piece-value piece) ])
-            (cond [ (is-pawn? piece)   (evaluate-pawn white? val idx)     ]
-                  [ (is-king? piece)   (evaluate-king white? val idx)     ]
-                  [ (is-queen? piece)  val                                ]
-                  [ (is-rook? piece)   val                                ]
-                  [ (is-bishop? piece) (evaluate-bishop piece white? val) ]
-                  [ (is-knight? piece) (evaluate-knight piece white? val) ]))))))
+  (let ([ score
+          (for*/sum ([ rank (in-range 8) ]
+                     [ file (in-range 8) ])
+            (let* ([ idx    (file-rank->idx file rank)        ]
+                   [ piece  (bytes-ref (board-squares b) idx) ])
+              (if (= piece empty-square)
+                  0.0
+                  (let ([ white? (is-white? piece)   ]
+                        [ val    (piece-value piece) ])
+                    (cond [ (is-pawn? piece)   (evaluate-pawn white? val idx)     ]
+                          [ (is-king? piece)   (evaluate-king white? val idx)     ]
+                          [ (is-queen? piece)  val                                ]
+                          [ (is-rook? piece)   val                                ]
+                          [ (is-bishop? piece) (evaluate-bishop piece white? val) ]
+                          [ (is-knight? piece) (evaluate-knight piece white? val) ]))))) ])
+    (if (board-whites-move? b)
+        score
+        (- score))))
 
 (define-inline (evaluate-bishop piece white? val)
   ;; Slightly higher value for deployed bishop
