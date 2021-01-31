@@ -6,6 +6,7 @@
 (require "./legality.rkt")
 (require "./move.rkt")
 (require "./movement.rkt")
+(require "./move-ordering.rkt")
 (require "./pgn.rkt")
 (require "./fen.rkt")
 (require "./piece.rkt")
@@ -18,23 +19,6 @@
 (define (search b max-level)
   (set-board-depth! b 0)
   (alpha-beta! b max-level MIN-SCORE MAX-SCORE))
-
-(define (move-iterator! b #:quiet-moves? [ quiet-moves? #t ])
-  (generate-moves! b #:quiet-moves? quiet-moves)
-  (let ([ tmoves (tactical-moves b) ]
-        [ thead  (tactical-head b)  ]
-        [ ti     0                  ]
-        [ qmoves (quiet-moves b)    ]
-        [ qhead  (quiet-head b)     ]
-        [ qi     0                  ])
-    (λ ()
-      (cond [ (<= ti thead)
-              (set! ti (add1 ti))
-              (vector-ref tmoves (sub1 ti)) ]
-            [ (<= qi qhead)
-              (set! qi (add1 qi))
-              (vector-ref qmoves (sub1 qi)) ]
-            [ else #f ]))))
 
 (define (quiesce! b max-level alpha beta)
   (define stand-pat (evaluate b))
