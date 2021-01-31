@@ -7,6 +7,8 @@
          "./board-slow.rkt"
          "./piece.rkt")
 
+(require debug/repl)
+
 (provide board->fen
          fen->board
          initial-fen)
@@ -45,9 +47,6 @@
     (pos->idx (format "~a~a" (second tuple) (third tuple))))
 
   ;; White castling ---------------------------------------------------------------------------
-  (define (get-white-king-idx)
-    (tuple->idx (get-white-king-file-rank b)))
-
   (define (get-white-k-rook-idx)
     (let ([ lst (filter (λ (tuple)
                           (and (is-white? (first tuple))
@@ -83,12 +82,9 @@
               (when idx (set-piece-has-moved! b idx))) ]
           [ else
             ;; No castling rights, so mark the white-king as having moved
-            (set-piece-has-moved! b (get-white-king-idx)) ]))
+            (set-piece-has-moved! b (board-white-king-idx b)) ]))
 
   ;; Black castling ---------------------------------------------------------------------------
-  (define (get-black-king-idx)
-    (tuple->idx (get-black-king-file-rank b)))
-
   (define (get-black-k-rook-idx)
     (let ([ lst (filter (λ (tuple)
                           (and (is-black? (first tuple))
@@ -124,7 +120,7 @@
               (when idx (set-piece-has-moved! b idx))) ]
           [ else
             ;; No castling rights, so mark the black-king as having moved
-            (set-piece-has-moved! b (get-black-king-idx)) ]))
+            (set-piece-has-moved! b (board-black-king-idx b)) ]))
 
   (if (regexp-match? #px"^([KQkq]+|-)$" castling)
       (begin
@@ -163,7 +159,16 @@
             (let* ([ piece (symbol-piece (~a c)) ]
                    [ idx   (file-rank->idx file rank) ])
               (bytes-set! squares idx piece)
+              (when (is-king? piece)
+                (fen->board-set-king-pos! b piece idx))
               (loop (add1 file) (cdr chars))))))))
+
+(define (fen->board-set-king-pos! b piece idx)
+  (when (not (is-king? piece)) (error "fen->board-set-king-pos!: not a king"))
+
+  (if (is-white? piece)
+      (set-board-white-king-idx! b idx)
+      (set-board-black-king-idx! b idx)))
 
 ;; --------------------------------------------------------------------------------------------
 ;; Create a FEN record to represent a board
@@ -295,6 +300,11 @@
                 (loop result file (add1 blanks)))))))
 
   (string-join (reverse (placement-list)) ""))
+
+(module+ main
+  (let ([ b
+          (fen->board "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1") ])
+    (void)))
 
 (module+ test
   (require rackunit)
