@@ -172,13 +172,29 @@
           (bytes-set! squares (+ src-idx west) empty-square) ]))
 
 (define (print-board b #:full? [ full? #f ])
+  (define (file->letter file)
+    (match file
+      [ 0 "a" ]
+      [ 1 "b" ]
+      [ 2 "c" ]
+      [ 3 "d" ]
+      [ 4 "e" ]
+      [ 5 "f" ]
+      [ 6 "g" ]
+      [ 7 "h" ]))
+
   (for ([ rank (in-range 8) ])
+    (printf "---------------------------------\n|")
     (for ([ file (in-range 8) ])
       (let* ([ idx   (+ 21 file (* rank 10))           ]
              [ piece (bytes-ref (board-squares b) idx) ]
              [ sym   (piece-symbol piece)              ])
-        (printf "~a " sym)))
-    (printf "\n"))
+        (printf " ~a |" sym)))
+    (printf "  ~a\n" (- 8 rank)))
+  (printf "---------------------------------\n|")
+  (for ([ file (in-range 8) ])
+    (printf " ~a |" (file->letter file)))
+  (printf "\n---------------------------------\n")
 
   (if (board-whites-move? b)
       (printf "White's move\n")
@@ -189,11 +205,45 @@
     (printf "Move-i: ~a. " (board-move-i b))
     (when (> (get-ep-idx b) 0)
       (printf "EP Square: ~a. " (idx->pos (get-ep-idx b))))
-    (printf "White king pos: ~a, Black king pos: ~a\n"
+    (printf "White king pos: ~a, Black king pos: ~a "
             (idx->pos (board-white-king-idx b))
-            (idx->pos (board-black-king-idx b))))
-
+            (idx->pos (board-black-king-idx b)))
+    ;; Castling rights
+    (printf "Castling: ~a\n" (castling-rights-string b)))
   (printf "\n"))
+
+(define (castling-rights-string b)
+  (define squares (board-squares b))
+  (let* ([ bk  (bytes-ref squares (pos->idx "e8")) ]
+         [ bk-ok (and (is-king? bk) (is-black? bk) (not (has-moved? bk))) ]
+         [ bkr (bytes-ref squares (pos->idx "h8")) ]
+         [ bkr-ok (and (is-rook? bkr) (is-black? bkr) (not (has-moved? bkr))) ]
+         [ bqr (bytes-ref squares (pos->idx "a8")) ]
+         [ bqr-ok (and (is-rook? bqr) (is-black? bqr) (not (has-moved? bqr))) ]
+         [ wk  (bytes-ref squares (pos->idx "e1")) ]
+         [ wk-ok (and (is-king? wk) (is-white? wk) (not (has-moved? wk))) ]
+         [ wkr (bytes-ref squares (pos->idx "h1")) ]
+         [ wkr-ok (and (is-rook? wkr) (is-white? wkr) (not (has-moved? wkr))) ]
+         [ wqr (bytes-ref squares (pos->idx "a1")) ]
+         [ wqr-ok (and (is-rook? wqr) (is-white? wqr) (not (has-moved? wqr))) ]
+         [ str (string-append
+                ;; White
+                (if wk-ok
+                    (cond [ (and wkr-ok wqr-ok) "KQ" ]
+                          [ wkr-ok              "K"  ]
+                          [ wqr-ok              "Q"  ]
+                          [ else                ""   ])
+                    "")
+                ;; Black
+                (if bk-ok
+                    (cond [ (and bkr-ok bqr-ok) "kq" ]
+                          [ bkr-ok              "k"  ]
+                          [ bqr-ok              "q"  ]
+                          [ else                ""   ])
+                    "")) ])
+    (if (non-empty-string? str)
+        str
+        "-")))
 
 (define (run)
   (let* ([ b (create-board) ]
