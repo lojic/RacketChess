@@ -5,13 +5,8 @@
 (require "./board.rkt")
 (require "./piece.rkt")
 
-(provide get-black-king-file-rank
-         get-pieces-file-rank
-         get-white-king-file-rank
+(provide get-pieces-file-rank
          set-piece-has-moved!)
-
-(define (get-black-king-file-rank b)
-  (car (get-pieces-file-rank b is-black-king?)))
 
 ;; Return a list of all pieces on the board in the following form:
 ;; ( (piece file rank)
@@ -31,9 +26,6 @@
       (if (pred? piece)
           (cons (list piece (string-ref pos 0) (string-ref pos 1)) result)
           result))))
-
-(define (get-white-king-file-rank b)
-  (car (get-pieces-file-rank b is-white-king?)))
 
 (define (set-piece-has-moved! b idx)
   (let ([ squares (board-squares b) ])
