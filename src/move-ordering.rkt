@@ -22,6 +22,6 @@
 (define-inline (mvv-lva m)
   (let ([ victim (move-captured-piece m) ])
     (if victim
-        (/ (abs (piece-value victim))
+        (- (abs (piece-value victim))
            (abs (piece-value (move-src m))))
         0)))
