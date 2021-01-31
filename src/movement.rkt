@@ -1,9 +1,10 @@
 #lang racket
 
-(require "./board.rkt")
-(require "./board-funcs.rkt")
-(require "./move.rkt")
-(require "./piece.rkt")
+(require "./board-funcs.rkt"
+         "./board.rkt"
+         "./move-ordering.rkt"
+         "./move.rkt"
+         "./piece.rkt")
 (require debug/repl)
 
 (provide generate-bishop-moves!
@@ -12,6 +13,7 @@
          generate-queen-moves!
          generate-rook-moves!
          generate-moves!
+         move-iterator!
          print-move)
 
 ;; --------------------------------------------------------------------------------------------
@@ -73,6 +75,24 @@
       (printf "=~a" (piece-symbol promoted))))
   (printf "\n"))
 
+(define (move-iterator! b #:quiet-moves? [ quiet-moves? #t ])
+  (generate-moves! b #:quiet-moves? quiet-moves)
+  (order-moves! b)
+  (let ([ tmoves (tactical-moves b) ]
+        [ thead  (tactical-head b)  ]
+        [ ti     0                  ]
+        [ qmoves (quiet-moves b)    ]
+        [ qhead  (quiet-head b)     ]
+        [ qi     0                  ])
+    (λ ()
+      (cond [ (<= ti thead)
+              (set! ti (add1 ti))
+              (vector-ref tmoves (sub1 ti)) ]
+            [ (<= qi qhead)
+              (set! qi (add1 qi))
+              (vector-ref qmoves (sub1 qi)) ]
+            [ else #f ]))))
+
 ;; --------------------------------------------------------------------------------------------
 ;; Private Implementation
 ;; --------------------------------------------------------------------------------------------
@@ -121,7 +141,7 @@
                                    (create-move piece idx target-idx #:captured-piece target)) ])))))
 
 (define (generate-pawn-moves! b idx piece #:quiet-moves? [ quiet-moves? #t ])
-  (let-values ([ (white? n1-idx n2-idx nw-idx w-idx ne-idx e-idx min8th max8th)
+  (let-values ([ (white? n1-idx n2-idx nw-idx w-idx ne-idx e-idx min8th max8th min2nd max2nd)
                  (if (is-white? piece)
                      (values #t
                              (+ idx north)
@@ -130,7 +150,7 @@
                              (+ idx west)
                              (+ idx north-east)
                              (+ idx east)
-                             21 28)
+                             21 28 81 88)
                      (values #f
                              (+ idx south)
                              (+ idx south south)
@@ -138,13 +158,13 @@
                              (+ idx west)
                              (+ idx south-east)
                              (+ idx east)
-                             91 98)) ])
+                             91 98 31 38)) ])
     (let* ([ squares (board-squares b)          ]
            [ n1      (bytes-ref squares n1-idx) ]
            [ n2      (bytes-ref squares n2-idx) ]
            [ nw      (bytes-ref squares nw-idx) ]
            [ ne         (bytes-ref squares ne-idx) ]
-           [ last-rank? (and (>= n1-idx min8th) (<= n1-idx max8th)) ])
+           [ last-rank? (<= min8th n1-idx max8th)  ])
 
       (when (and (= n1 empty-square) quiet-moves?)
         ;; Single push
@@ -156,7 +176,7 @@
             (add-quiet-move! b (create-move piece idx n1-idx)))
 
         ;; Double push (only if single push was allowed)
-        (when (and (not (has-moved? piece))
+        (when (and (<= min2nd idx max2nd)
                    (= n2 empty-square))
           (add-quiet-move! b (create-move piece idx n2-idx))))
 
