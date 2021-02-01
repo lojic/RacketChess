@@ -181,18 +181,18 @@
 (define-inline (piece-value piece)
   (let ([ type (bitwise-and piece piece-type-bits) ])
     (if (is-white? piece)
-        (cond [ (= type #b001)   1.0 ]
-              [ (= type #b010)   3.0 ]
-              [ (= type #b011)   3.0 ]
-              [ (= type #b100)   5.0 ]
-              [ (= type #b101)   9.0 ]
-              [ (= type #b110) 100.0 ])
-        (cond [ (= type #b001)   -1.0 ]
-              [ (= type #b010)   -3.0 ]
-              [ (= type #b011)   -3.0 ]
-              [ (= type #b100)   -5.0 ]
-              [ (= type #b101)   -9.0 ]
-              [ (= type #b110) -100.0 ]))))
+        (cond [ (= type #b001)   100 ]
+              [ (= type #b010)   300 ]
+              [ (= type #b011)   300 ]
+              [ (= type #b100)   500 ]
+              [ (= type #b101)   900 ]
+              [ (= type #b110) 10000 ])
+        (cond [ (= type #b001)   -100 ]
+              [ (= type #b010)   -300 ]
+              [ (= type #b011)   -300 ]
+              [ (= type #b100)   -500 ]
+              [ (= type #b101)   -900 ]
+              [ (= type #b110) -10000 ]))))
 
 (define (symbol-piece sym)
   (hash-ref symbol-pieces sym))
@@ -333,19 +333,19 @@
   ;; piece-value
   ;; ------------------------------------------------------------------------------------------
 
-  (check-equal? (piece-value black-pawn)   -1.0)
-  (check-equal? (piece-value black-knight) -3.0)
-  (check-equal? (piece-value black-bishop) -3.0)
-  (check-equal? (piece-value black-rook)   -5.0)
-  (check-equal? (piece-value black-queen)  -9.0)
-  (check-not-false (<= (piece-value black-king) -100.0))
+  (check-equal? (piece-value black-pawn)   -100)
+  (check-equal? (piece-value black-knight) -300)
+  (check-equal? (piece-value black-bishop) -300)
+  (check-equal? (piece-value black-rook)   -500)
+  (check-equal? (piece-value black-queen)  -900)
+  (check-not-false (<= (piece-value black-king) -10000))
 
-  (check-equal? (piece-value white-pawn)   1.0)
-  (check-equal? (piece-value white-knight) 3.0)
-  (check-equal? (piece-value white-bishop) 3.0)
-  (check-equal? (piece-value white-rook)   5.0)
-  (check-equal? (piece-value white-queen)  9.0)
-  (check-not-false (>= (piece-value white-king) 100.0))
+  (check-equal? (piece-value white-pawn)   100)
+  (check-equal? (piece-value white-knight) 300)
+  (check-equal? (piece-value white-bishop) 300)
+  (check-equal? (piece-value white-rook)   500)
+  (check-equal? (piece-value white-queen)  900)
+  (check-not-false (>= (piece-value white-king) 10000))
 
   ;; ------------------------------------------------------------------------------------------
   ;; symbol-piece

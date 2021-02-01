@@ -15,7 +15,7 @@
             (let* ([ idx    (file-rank->idx file rank)        ]
                    [ piece  (bytes-ref (board-squares b) idx) ])
               (if (= piece empty-square)
-                  0.0
+                  0
                   (let ([ white? (is-white? piece)   ]
                         [ val    (piece-value piece) ])
                     (cond [ (is-pawn? piece)   (evaluate-pawn white? val idx)     ]
@@ -31,31 +31,31 @@
 (define-inline (evaluate-bishop piece white? val)
   ;; Slightly higher value for deployed bishop
   (if (has-moved? piece)
-      ((if white? + -) val 0.01)
+      ((if white? + -) val 1)
       val))
 
 (define-inline (evaluate-king white? val idx)
   ;; Slightly higher value for king on castled square
   (if white?
       (if (or (= idx 93) (= idx 97))
-          (+ val 0.05)
+          (+ val 5)
           val)
       (if (or (= idx 23) (= idx 27))
-          (- val 0.05)
+          (- val 5)
           val)))
 
 (define-inline (evaluate-knight piece white? val)
   ;; Slightly higher value for deployed knight
   (if (has-moved? piece)
-      ((if white? + -) val 0.01)
+      ((if white? + -) val 1)
       val))
 
 (define-inline (evaluate-pawn white? val idx)
   ;; Slightly higher value for pawns on a center square
   (if white?
       (if (or (= idx 64) (= idx 65))
-          (+ val 0.05)
+          (+ val 5)
           val)
       (if (or (= idx 54) (= idx 55))
-          (- val 0.05)
+          (- val 5)
           val)))

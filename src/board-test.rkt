@@ -27,9 +27,9 @@
   ;; evaluate
   ;; ------------------------------------------------------------------------------------------
   (let ([ b (fen->board) ])
-    (check-within (evaluate b) 0.0 0.00001)
+    (check-equal? (evaluate b) 0)
     ;; Remove the White Queen
     (bytes-set! (board-squares b) 94 empty-square)
-    (check-within (evaluate b) -9.0 0.00001))
+    (check-equal? (evaluate b) -900))
 
   )

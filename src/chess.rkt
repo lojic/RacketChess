@@ -12,8 +12,8 @@
 (require "./piece.rkt")
 (require debug/repl)
 
-(define MIN-SCORE -1000.0)
-(define MAX-SCORE 1000.0)
+(define MIN-SCORE -100000)
+(define MAX-SCORE 100000)
 (define QUIESCE-LEVELS 3)
 
 (define (search b max-level)
@@ -143,4 +143,4 @@
               (cond [ (string=? player "w") #f ]
                     [ (string=? player "b") #t ]
                     [ else (loop) ]))) ])
-    (game 5 computer-plays-black?)))
+    (game 6 computer-plays-black?)))

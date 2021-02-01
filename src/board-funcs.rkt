@@ -194,7 +194,6 @@
   (printf "---------------------------------\n|")
   (for ([ file (in-range 8) ])
     (printf " ~a |" (file->letter file)))
-  (printf "\n---------------------------------\n")
 
   (if (board-whites-move? b)
       (printf "White's move\n")
