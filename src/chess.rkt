@@ -85,6 +85,11 @@
                         (loop alpha move))))))))))
 
 (define (game depth computer-plays-black? [ fen #f ])
+  (define (normalize-score score)
+    (if computer-plays-black?
+        (- score)
+        score))
+
   (define b (if fen
                 (fen->board fen)
                 (fen->board)))
@@ -94,7 +99,7 @@
 
   (let loop ()
     (let* ([ pair (time (search b depth)) ]
-           [ score (car pair) ]
+           [ score (normalize-score (car pair)) ]
            [ m (cdr pair) ])
       (if m
           (begin
@@ -102,7 +107,7 @@
             (make-move! b m)
             (print-board b #:full? #t)
             (print-move m)
-            (printf "Score: ~a\n" score)
+            (printf "Score: ~a\n" (/ score 100.0))
             (displayln "")
             (make-human-move! b)
             (loop))
