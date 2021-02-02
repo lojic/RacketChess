@@ -147,7 +147,7 @@
   (require rackunit)
 
   ;; ------------------------------------------------------------------------------------------
-  ;; Initial position
+  ;; Initial position CPW
   ;; ------------------------------------------------------------------------------------------
   (let ([ obj (create-zero-counts) ]
         [ b   (fen->board "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") ])
@@ -218,7 +218,7 @@
       (check-equal? (counts-promotions obj) 0)))
 
   ;; ------------------------------------------------------------------------------------------
-  ;; Position 2 - also known as Kiwipete by Peter McKenzie
+  ;; Position 2 - CPW also known as Kiwipete by Peter McKenzie
   ;; ------------------------------------------------------------------------------------------
   (let ([ obj (create-zero-counts) ]
         [ b   (fen->board "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1") ])
@@ -272,7 +272,7 @@
     )
 
   ;; ------------------------------------------------------------------------------------------
-  ;; Position 3
+  ;; Position 3 CPW
   ;; ------------------------------------------------------------------------------------------
   (let ([ obj (create-zero-counts) ]
         [ b   (fen->board "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1") ])
@@ -335,7 +335,7 @@
     )
 
   ;; ------------------------------------------------------------------------------------------
-  ;; Position 4
+  ;; Position 4 CPW
   ;; ------------------------------------------------------------------------------------------
   (let ([ obj (create-zero-counts) ])
     (for ([ b (in-list (list
@@ -391,7 +391,7 @@
       ))
 
   ;; ------------------------------------------------------------------------------------------
-  ;; Position 5
+  ;; Position 5 CPW
   ;; This position was discussed on Talkchess and caught bugs in
   ;; engines several years old at depth 3 and was also reported wrong
   ;; here, hopefully now corrected with the results given by Steven
@@ -428,7 +428,7 @@
     )
 
   ;; ------------------------------------------------------------------------------------------
-  ;; Position 5
+  ;; Position 6 CPW
   ;; ------------------------------------------------------------------------------------------
   (let ([ obj (create-zero-counts) ]
         [ b   (fen->board "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10") ])
@@ -461,9 +461,49 @@
     )
 
   ;; From: http://talkchess.com/forum3/viewtopic.php?f=7&t=55787#p616236
+  ;; Also from: http://www.rocechess.ch/perft.html
   (let ([ obj (create-zero-counts) ]
         [ b   (fen->board "n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1") ])
+
+    ;; Depth 1
+    (reset-counts! obj)
     (perft! b 1 obj)
-    (check-equal? (counts-nodes obj) 24))
+    (check-equal? (counts-nodes obj) 24)
+
+    ;; Depth 2
+    (reset-counts! obj)
+    (perft! b 2 obj)
+    (check-equal? (counts-nodes obj) 496)
+
+    ;; Depth 3
+    (reset-counts! obj)
+    (perft! b 3 obj)
+    (check-equal? (counts-nodes obj) 9483)
+
+    ;; Depth 4
+    (reset-counts! obj)
+    (perft! b 4 obj)
+    (check-equal? (counts-nodes obj) 182838)
+
+    ;; Depth 5
+    (reset-counts! obj)
+    (perft! b 5 obj)
+    (check-equal? (counts-nodes obj) 3605103)
+
+    (when LONG-TEST
+      ;; Depth 6
+      (reset-counts! obj)
+      (perft! b 6 obj)
+      (check-equal? (counts-nodes obj) 71179139))
+
+    )
+
+  ;; From: http://talkchess.com/forum3/viewtopic.php?f=7&t=76466&p=881175#p881149
+  (let ([ obj (create-zero-counts) ]
+        [ b   (fen->board "8/8/8/8/3kpP1R/8/6K1/8 b - f3 0 1") ])
+    (reset-counts! obj)
+    (perft! b 1 obj)
+    (check-equal? (counts-nodes obj) 7))
+
 
   )
