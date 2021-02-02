@@ -14,77 +14,101 @@
 
 (define MIN-SCORE -100000)
 (define MAX-SCORE 100000)
-(define QUIESCE-LEVELS 3)
 
-(define (search b max-level)
-  (set-board-depth! b 0)
-  (alpha-beta! b max-level MIN-SCORE MAX-SCORE))
+(define (search b max-level seconds)
+  (define is-timeout? (get-timeout-func seconds))
 
-(define (quiesce! b max-level alpha beta)
+  (let loop ([ level 1 ][ best #f ])
+    (if (or (> level max-level)
+            (is-timeout?))
+        best
+        (begin
+          (set-board-depth! b 0)
+          (let ([ result (alpha-beta! b level MIN-SCORE MAX-SCORE is-timeout?) ])
+            (if result
+                (begin
+                  (printf "Best move (~a): " level)
+                  (print-move (cdr result))
+                  (loop (add1 level) result))
+                best))))))
+
+
+(define (quiesce! b alpha beta is-timeout?)
   (define stand-pat (evaluate b))
   (define depth     (board-depth b))
   (define get-move  (move-iterator! b #:quiet-moves? #f))
 
-  (if (= depth max-level)
-      stand-pat
-      (if (>= stand-pat beta)
-          beta
-          (let loop ([ alpha (max alpha stand-pat) ])
-            (let ([ m (get-move) ])
-              (if (or (not m) (>= alpha beta))
-                  ;; No more moves, or alpha >= beta
-                  alpha
-                  (begin
-                    (make-move! b m)
-                    (if (is-legal? b m)
-                        ;; Legal move, continue
-                        (let ([ score (- (quiesce! b max-level (- beta) (- alpha))) ])
-                          (unmake-move! b m)
-                          (cond [ (>= score beta) beta         ]
-                                [ (> score alpha) (loop score) ]
-                                [ else            (loop alpha) ]))
-                        ;; Illegal move, ignore move
-                        (begin
-                          (unmake-move! b m)
-                          (loop alpha))))))))))
+  (cond [ (is-timeout?) #f ]
+        [ else
+          (if (>= stand-pat beta)
+              beta
+              (let loop ([ alpha (max alpha stand-pat) ])
+                (let ([ m (get-move) ])
+                  (if (or (not m) (>= alpha beta))
+                      ;; No more moves, or alpha >= beta
+                      alpha
+                      (begin
+                        (make-move! b m)
+                        (if (is-legal? b m)
+                            ;; Legal move, continue
+                            (let* ([ result (quiesce! b (- beta) (- alpha) is-timeout?) ]
+                                   [ score  (and result (- result)) ])
+                              (unmake-move! b m)
+                              (cond [ (not score)     #f           ]
+                                    [ (>= score beta) beta         ]
+                                    [ (> score alpha) (loop score) ]
+                                    [ else            (loop alpha) ]))
+                            ;; Illegal move, ignore move
+                            (begin
+                              (unmake-move! b m)
+                              (loop alpha)))))))) ]))
 
-(define (alpha-beta! b max-level alpha beta)
+(define (alpha-beta! b max-level alpha beta is-timeout?)
   (define depth (board-depth b))
 
-  (if (= depth max-level)
-      (quiesce! b (+ max-level QUIESCE-LEVELS) alpha beta)
-      (let ([ get-move (move-iterator! b) ])
-        (let loop ([ alpha alpha ]
-                   [ move  #f    ])
-          (let ([ m (get-move) ])
-            (if (or (not m) (>= alpha beta))
-                ;; No more moves, or alpha >= beta
+  (cond [ (is-timeout?) #f ]
+        [ (= depth max-level)
+          (quiesce! b alpha beta is-timeout?) ]
+        [ else
+          (let ([ get-move (move-iterator! b) ])
+            (let loop ([ alpha alpha ]
+                       [ move  #f    ])
+              (let ([ m (get-move) ])
+                (if (or (not m) (>= alpha beta))
+                    ;; No more moves, or alpha >= beta
 
-                ;; If we're at the top level, return move & score;
-                ;; otherwise, just score. If no move was found, mate
-                ;; is implied. Adjust the score by depth to favor
-                ;; shorter mates to prevent the program from just
-                ;; gobbling up pieces instead of going for the mate!
-                (if (= depth 0)
-                    (cons alpha move)
-                    (if move
-                        alpha
-                        (+ MIN-SCORE depth)))
-                (begin
-                  (make-move! b m)
-                  (if (is-legal? b m)
-                      ;; Legal move, continue
-                      (let ([ score (- (alpha-beta! b max-level (- beta) (- alpha))) ])
-                        (unmake-move! b m)
-                        (cond [ (>= score beta) beta              ]
-                              [ (> score alpha) (loop score m)    ]
-                              [ else            (loop alpha move) ]))
-                      ;; Illegal move, ignore move
-                      (begin
-                        (unmake-move! b m)
-                        (loop alpha move))))))))))
+                    ;; If we're at the top level, return move & score;
+                    ;; otherwise, just score. If no move was found, mate
+                    ;; is implied. Adjust the score by depth to favor
+                    ;; shorter mates to prevent the program from just
+                    ;; gobbling up pieces instead of going for the mate!
+                    (if (= depth 0)
+                        (cons alpha move)
+                        (if move
+                            alpha
+                            (+ MIN-SCORE depth)))
+                    (begin
+                      (make-move! b m)
+                      (if (is-legal? b m)
+                          ;; Legal move, continue
+                          (let* ([ result (alpha-beta! b max-level (- beta) (- alpha) is-timeout?) ]
+                                 [ score  (and result (- result)) ])
+                            (unmake-move! b m)
+                            (cond [ (not score)     #f                ]
+                                  [ (>= score beta) beta              ]
+                                  [ (> score alpha) (loop score m)    ]
+                                  [ else            (loop alpha move) ]))
+                          ;; Illegal move, ignore move
+                          (begin
+                            (unmake-move! b m)
+                            (loop alpha move)))))))) ]))
 
-(define (game depth computer-plays-black? [ fen #f ])
+(define (get-timeout-func seconds)
+  (let ([ t1 (current-seconds) ])
+    (λ ()
+      (> (- (current-seconds) t1) seconds))))
+
+(define (game depth computer-plays-black? seconds [ fen #f ])
   (define (normalize-score score)
     (if computer-plays-black?
         (- score)
@@ -98,7 +122,7 @@
     (make-human-move! b))
 
   (let loop ()
-    (let* ([ pair (time (search b depth)) ]
+    (let* ([ pair (search b depth seconds) ]
            [ score (normalize-score (car pair)) ]
            [ m (cdr pair) ])
       (if m
@@ -148,4 +172,4 @@
               (cond [ (string=? player "w") #f ]
                     [ (string=? player "b") #t ]
                     [ else (loop) ]))) ])
-    (game 6 computer-plays-black?)))
+    (game 20 computer-plays-black? 10)))
