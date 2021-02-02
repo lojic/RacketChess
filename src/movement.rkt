@@ -31,12 +31,12 @@
            [ piece (bytes-ref (board-squares b) idx) ])
       (when (is-right-color-piece? piece is-white?)
         (match (piece-type piece)
-          [ #b001 (generate-pawn-moves!   b idx piece #:quiet-moves? quiet-moves) ]
-          [ #b010 (generate-knight-moves! b idx piece #:quiet-moves? quiet-moves) ]
-          [ #b011 (generate-bishop-moves! b idx piece #:quiet-moves? quiet-moves) ]
-          [ #b100 (generate-rook-moves!   b idx piece #:quiet-moves? quiet-moves) ]
-          [ #b101 (generate-queen-moves!  b idx piece #:quiet-moves? quiet-moves) ]
-          [ #b110 (generate-king-moves!   b idx piece #:quiet-moves? quiet-moves) ])))))
+          [ #b001 (generate-pawn-moves!   b idx piece #:quiet-moves? quiet-moves?) ]
+          [ #b010 (generate-knight-moves! b idx piece #:quiet-moves? quiet-moves?) ]
+          [ #b011 (generate-bishop-moves! b idx piece #:quiet-moves? quiet-moves?) ]
+          [ #b100 (generate-rook-moves!   b idx piece #:quiet-moves? quiet-moves?) ]
+          [ #b101 (generate-queen-moves!  b idx piece #:quiet-moves? quiet-moves?) ]
+          [ #b110 (generate-king-moves!   b idx piece #:quiet-moves? quiet-moves?) ])))))
 
 (define (generate-bishop-moves! b idx piece #:quiet-moves? [ quiet-moves? #t ])
   (generate-sliding-moves! b idx piece north-east quiet-moves?)
@@ -53,8 +53,8 @@
   (generate-offset-moves! b idx piece knight-offsets quiet-moves?))
 
 (define (generate-queen-moves! b idx piece #:quiet-moves? [ quiet-moves? #t ])
-  (generate-bishop-moves! b idx piece #:quiet-moves? quiet-moves)
-  (generate-rook-moves! b idx piece #:quiet-moves? quiet-moves))
+  (generate-bishop-moves! b idx piece #:quiet-moves? quiet-moves?)
+  (generate-rook-moves! b idx piece #:quiet-moves? quiet-moves?))
 
 (define (generate-rook-moves! b idx piece #:quiet-moves? [ quiet-moves? #t ])
   (generate-sliding-moves! b idx piece north quiet-moves?)
@@ -76,7 +76,7 @@
   (printf "\n"))
 
 (define (move-iterator! b #:quiet-moves? [ quiet-moves? #t ])
-  (generate-moves! b #:quiet-moves? quiet-moves)
+  (generate-moves! b #:quiet-moves? quiet-moves?)
   (order-moves! b)
   (let ([ tmoves (tactical-moves b) ]
         [ thead  (tactical-head b)  ]
