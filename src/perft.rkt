@@ -27,9 +27,9 @@
                 promotions)
         #:transparent #:mutable)
 
-(define (show-divide hsh)
-  (for ([ key (in-list (sort (hash-keys hsh) string<?)) ])
-    (printf "~a: ~a\n" key (hash-ref hsh key))))
+(define (show-divide lst)
+  (for ([ str (in-list lst) ])
+    (printf "~a\n" str)))
 
 (define (create-counts nodes captures ep-captures castles promotions)
   (counts nodes captures ep-captures castles promotions))
@@ -68,9 +68,9 @@
   (define obj (create-zero-counts))
   (generate-moves! b)
   (let ([ get-move (move-iterator! b) ])
-    (let loop ([ hsh (hash) ][ m (get-move) ])
+    (let loop ([ result '() ][ m (get-move) ])
       (if (not m)
-          hsh
+          (reverse result)
           (begin
             (make-move! b m)
             (if (is-legal? b m)
@@ -81,14 +81,12 @@
                   (let ([ key (format "~a~a"
                                       (idx->pos (move-src-idx m))
                                       (idx->pos (move-dst-idx m))) ])
-                    (loop (hash-set hsh
-                                    key
-                                    (+ (counts-nodes obj)
-                                       (hash-ref hsh key 0)))
+                    (loop (cons (format "~a: ~a" key (counts-nodes obj))
+                                result)
                           (get-move))))
                 (begin
                   (unmake-move! b m)
-                  (loop hsh (get-move)))))))))
+                  (loop result (get-move)))))))))
 
 (define (perft! b max-level counts #:evaluate? [ evaluate? #f ] [ m #f ])
   (if (= (board-depth b) max-level)
@@ -138,8 +136,8 @@
     (printf "  Castles:    ~a\n" (counts-castles counts))
     (printf "  Promotions: ~a\n" (counts-promotions counts)))
 
-  (let ([ b (fen->board "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1") ])
-    (show-divide (divide b 2)))
+  (let ([ b (fen->board "r4rk1/ppp2ppp/2n5/3pp3/8/1BP4P/P1PPKP2/R1BQ3q b - - 0 1") ])
+    (show-divide (divide b 1)))
 
   )
 
