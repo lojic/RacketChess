@@ -1,112 +1,12 @@
 #lang racket
 
-(require "./board-funcs.rkt")
 (require "./board.rkt")
-(require "./evaluation.rkt")
+(require "./board-funcs.rkt")
 (require "./legality.rkt")
-(require "./move.rkt")
 (require "./movement.rkt")
-(require "./move-ordering.rkt")
 (require "./pgn.rkt")
 (require "./fen.rkt")
-(require "./piece.rkt")
-(require debug/repl)
-
-(define MIN-SCORE -100000)
-(define MAX-SCORE 100000)
-
-(define (search b max-level seconds)
-  (define is-timeout? (get-timeout-func seconds))
-
-  (let loop ([ level 1 ][ best #f ])
-    (if (or (> level max-level)
-            (is-timeout?))
-        best
-        (begin
-          (set-board-depth! b 0)
-          (let ([ result (alpha-beta! b level MIN-SCORE MAX-SCORE is-timeout?) ])
-            (if result
-                (begin
-                  (printf "Best move (~a): " level)
-                  (print-move (cdr result))
-                  (loop (add1 level) result))
-                best))))))
-
-
-(define (quiesce! b alpha beta is-timeout?)
-  (define stand-pat (evaluate b))
-  (define depth     (board-depth b))
-  (define get-move  (move-iterator! b #:quiet-moves? #f))
-
-  (cond [ (is-timeout?) #f ]
-        [ else
-          (if (>= stand-pat beta)
-              beta
-              (let loop ([ alpha (max alpha stand-pat) ])
-                (let ([ m (get-move) ])
-                  (if (or (not m) (>= alpha beta))
-                      ;; No more moves, or alpha >= beta
-                      alpha
-                      (begin
-                        (make-move! b m)
-                        (if (is-legal? b m)
-                            ;; Legal move, continue
-                            (let* ([ result (quiesce! b (- beta) (- alpha) is-timeout?) ]
-                                   [ score  (and result (- result)) ])
-                              (unmake-move! b m)
-                              (cond [ (not score)     #f           ]
-                                    [ (>= score beta) beta         ]
-                                    [ (> score alpha) (loop score) ]
-                                    [ else            (loop alpha) ]))
-                            ;; Illegal move, ignore move
-                            (begin
-                              (unmake-move! b m)
-                              (loop alpha)))))))) ]))
-
-(define (alpha-beta! b max-level alpha beta is-timeout?)
-  (define depth (board-depth b))
-
-  (cond [ (is-timeout?) #f ]
-        [ (= depth max-level)
-          (quiesce! b alpha beta is-timeout?) ]
-        [ else
-          (let ([ get-move (move-iterator! b) ])
-            (let loop ([ alpha alpha ]
-                       [ move  #f    ])
-              (let ([ m (get-move) ])
-                (if (or (not m) (>= alpha beta))
-                    ;; No more moves, or alpha >= beta
-
-                    ;; If we're at the top level, return move & score;
-                    ;; otherwise, just score. If no move was found, mate
-                    ;; is implied. Adjust the score by depth to favor
-                    ;; shorter mates to prevent the program from just
-                    ;; gobbling up pieces instead of going for the mate!
-                    (if (= depth 0)
-                        (cons alpha move)
-                        (if move
-                            alpha
-                            (+ MIN-SCORE depth)))
-                    (begin
-                      (make-move! b m)
-                      (if (is-legal? b m)
-                          ;; Legal move, continue
-                          (let* ([ result (alpha-beta! b max-level (- beta) (- alpha) is-timeout?) ]
-                                 [ score  (and result (- result)) ])
-                            (unmake-move! b m)
-                            (cond [ (not score)     #f                ]
-                                  [ (>= score beta) beta              ]
-                                  [ (> score alpha) (loop score m)    ]
-                                  [ else            (loop alpha move) ]))
-                          ;; Illegal move, ignore move
-                          (begin
-                            (unmake-move! b m)
-                            (loop alpha move)))))))) ]))
-
-(define (get-timeout-func seconds)
-  (let ([ t1 (current-seconds) ])
-    (λ ()
-      (> (- (current-seconds) t1) seconds))))
+(require "./search.rkt")
 
 (define (game depth computer-plays-black? seconds [ fen #f ])
   (define (normalize-score score)
@@ -118,10 +18,11 @@
                 (fen->board fen)
                 (fen->board)))
 
-  (when computer-plays-black?
+  (when (and computer-plays-black?
+             (board-whites-move? b))
     (make-human-move! b))
 
-  (let loop ()
+  (let loop ([ seconds seconds ])
     (let* ([ pair (search b depth seconds) ]
            [ score (normalize-score (car pair)) ]
            [ m (cdr pair) ])
@@ -133,17 +34,30 @@
             (print-move m)
             (printf "Score: ~a\n" (/ score 100.0))
             (displayln "")
-            (make-human-move! b)
-            (loop))
+            (let ([ new-seconds (make-human-move! b) ])
+              (if new-seconds
+                  (begin
+                    (printf "New think time = ~a\n" new-seconds)
+                    (loop new-seconds))
+                  (loop seconds))))
           (printf "No move!\n")))))
 
-(define (get-move b)
+(define (get-human-move b)
   (with-handlers ([ exn:fail?
                     (λ (e)
                       (displayln (exn-message e))
-                      #f) ])
+                      (cons #f #f)) ])
     (display "Enter move: ")
-    (pgn-move b (read-line))))
+    (let ([ lst (string-split (read-line)) ])
+      (if (null? lst)
+          ;; Apparently just hit enter key
+          (cons #f #f)
+          ;; Something entered
+          (cons
+           (pgn-move b (car lst))
+           (if (null? (cdr lst))
+               #f
+               (string->number (cadr lst))))))))
 
 (define (make-move b m)
   (with-handlers ([ exn:fail?
@@ -159,10 +73,11 @@
           #f))))
 
 (define (make-human-move! b)
-  (let ([ m (get-move b) ])
+  (match-let ([ (cons m secs) (get-human-move b) ])
     (if (and m (make-move b m))
         (print-board b #:full? #t)
-        (make-human-move! b))))
+        (make-human-move! b))
+    secs))
 
 (module+ main
   (let ([ computer-plays-black?
@@ -172,4 +87,4 @@
               (cond [ (string=? player "w") #f ]
                     [ (string=? player "b") #t ]
                     [ else (loop) ]))) ])
-    (game 20 computer-plays-black? 10)))
+    (game 20 computer-plays-black? 5)))
