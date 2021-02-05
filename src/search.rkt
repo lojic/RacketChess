@@ -37,18 +37,22 @@
 (define (search b max-level seconds)
   (init-timer! seconds)
 
-  (let loop ([ level 1 ][ best (cons #f #f) ])
+  (let loop ([ level 1 ][ best #f ])
     (if (or (> level max-level)
             (is-timeout?))
         best
         (begin
           (set-board-depth! b 0)
-          (match-let ([ (cons score m) (alpha-beta! b level MIN-SCORE MAX-SCORE is-timeout?) ])
-            (if m
-                (begin
-                  (printf "Best move (~a): " level)
-                  (print-move m)
-                  (loop (add1 level) (cons score m)))
+          (let ([ result (alpha-beta! b level MIN-SCORE MAX-SCORE is-timeout?) ])
+            (if result
+                (let ([ score (car result) ]
+                      [ m     (cdr result) ])
+                  (if m
+                      (begin
+                        (printf "Best move (~a): " level)
+                        (print-move m)
+                        (loop (add1 level) (cons score m)))
+                      best))
                 best))))))
 
 (define (alpha-beta! b max-level alpha beta is-timeout?)
