@@ -126,7 +126,7 @@
                       (loop ti (add1 qi))) ]))))))
 
 (module+ main
-  #;(let* ([ max-level 6 ]
+  (let* ([ max-level 6 ]
          [ counts (create-zero-counts) ])
     (time (perft! (fen->board) max-level #:evaluate? #f counts))
     (printf "perft(~a) results:\n" max-level)
@@ -135,10 +135,6 @@
     (printf "  EP Cap:     ~a\n" (counts-ep-captures counts))
     (printf "  Castles:    ~a\n" (counts-castles counts))
     (printf "  Promotions: ~a\n" (counts-promotions counts)))
-
-  (let ([ b (fen->board "r4rk1/ppp2ppp/2n5/3pp3/8/1BP4P/P1PPKP2/R1BQ3q b - - 0 1") ])
-    (show-divide (divide b 1)))
-
   )
 
 (module+ test

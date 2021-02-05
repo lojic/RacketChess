@@ -37,18 +37,18 @@
 (define (search b max-level seconds)
   (init-timer! seconds)
 
-  (let loop ([ level 1 ][ best #f ])
+  (let loop ([ level 1 ][ best (cons #f #f) ])
     (if (or (> level max-level)
             (is-timeout?))
         best
         (begin
           (set-board-depth! b 0)
-          (let ([ result (alpha-beta! b level MIN-SCORE MAX-SCORE is-timeout?) ])
-            (if result
+          (match-let ([ (cons score m) (alpha-beta! b level MIN-SCORE MAX-SCORE is-timeout?) ])
+            (if m
                 (begin
                   (printf "Best move (~a): " level)
-                  (print-move (cdr result))
-                  (loop (add1 level) result))
+                  (print-move m)
+                  (loop (add1 level) (cons score m)))
                 best))))))
 
 (define (alpha-beta! b max-level alpha beta is-timeout?)
@@ -84,10 +84,7 @@
                             (unmake-move! b m)
                             (cond [ (not score)     #f                ]
                                   [ (>= score beta) beta              ]
-                                  [ (> score alpha)
-                                    (print-move m)
-                                    (printf "new alpha ~a\n" score)
-                                    (loop score m)    ]
+                                  [ (> score alpha) (loop score m)    ]
                                   [ else            (loop alpha move) ]))
                           ;; Illegal move, ignore move
                           (begin
@@ -95,7 +92,6 @@
                             (loop alpha move)))))))) ]))
 
 (define (quiesce! b alpha beta is-timeout?)
-  (printf "quiesce! alpha=~a, beta=~a\n" alpha beta)
   (define stand-pat (evaluate b))
   (define depth     (board-depth b))
   (define get-move  (move-iterator! b #:quiet-moves? #f))

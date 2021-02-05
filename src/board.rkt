@@ -112,13 +112,13 @@
 (define-inline (full-move b)
   (add1 (arithmetic-shift (board-move-i b) -1)))
 
-(define (get-ep-idx b)
+(define-inline (get-ep-idx b)
   (vector-ref (board-ep-idx b) (board-move-i b)))
 
 (define (idx->pos idx)
   (vector-ref positions idx))
 
-(define (init-moves! b)
+(define-inline (init-moves! b)
   (let ([ d (board-depth b) ])
     (vector-set! (board-quiet-head b) d -1)
     (vector-set! (board-tactical-head b) d -1)))
@@ -126,18 +126,18 @@
 (define (pos->idx pos)
   (vector-member pos positions))
 
-(define (quiet-head b [ d #f ])
+(define-inline (quiet-head b [ d #f ])
   (vector-ref (board-quiet-head b)
               (if d d (board-depth b))))
 
-(define (quiet-moves b [ d #f ])
+(define-inline (quiet-moves b [ d #f ])
   (vector-ref (board-quiet-moves b)
               (if d d (board-depth b))))
 
-(define (reset-depth! b)
+(define-inline (reset-depth! b)
   (set-board-depth! b 0))
 
-(define (set-ep-idx! b v [delta #f])
+(define-inline (set-ep-idx! b v [delta #f])
   (if delta
       (vector-set! (board-ep-idx b)
                    (+ (board-move-i b) delta)
@@ -151,21 +151,21 @@
       (set-board-move-i! b (add1 (arithmetic-shift (sub1 full-move) 1)))
       (set-board-move-i! b (arithmetic-shift (sub1 full-move) 1))))
 
-(define (set-quiet-head! b v [ d #f ])
+(define-inline (set-quiet-head! b v [ d #f ])
   (vector-set! (board-quiet-head b)
                (if d d (board-depth b))
                v))
 
-(define (set-tactical-head! b v [ d #f ])
+(define-inline (set-tactical-head! b v [ d #f ])
   (vector-set! (board-tactical-head b)
                (if d d (board-depth b))
                v))
 
-(define (tactical-head b [ d #f ])
+(define-inline (tactical-head b [ d #f ])
   (vector-ref (board-tactical-head b)
               (if d d (board-depth b))))
 
-(define (tactical-moves b [ d #f ])
+(define-inline (tactical-moves b [ d #f ])
   (vector-ref (board-tactical-moves b)
               (if d d (board-depth b))))
 

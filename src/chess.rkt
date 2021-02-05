@@ -23,11 +23,9 @@
     (make-human-move! b))
 
   (let loop ([ seconds seconds ])
-    (let* ([ pair (search b depth seconds) ]
-           [ score (normalize-score (car pair)) ]
-           [ m (cdr pair) ])
+    (match-let ([ (cons score m) (search b depth seconds) ])
       (if m
-          (begin
+          (let ([ score (normalize-score score) ])
             (displayln "")
             (make-move! b m)
             (print-board b #:full? #t)

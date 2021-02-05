@@ -6,6 +6,7 @@
          "./move.rkt"
          "./piece.rkt")
 (require debug/repl)
+(require racket/performance-hint)
 
 (provide generate-bishop-moves!
          generate-king-moves!
@@ -97,12 +98,12 @@
 ;; Private Implementation
 ;; --------------------------------------------------------------------------------------------
 
-(define (add-quiet-move! b m)
+(define-inline (add-quiet-move! b m)
   (let ([ head (add1 (quiet-head b)) ])
     (set-quiet-head! b head)
     (vector-set! (quiet-moves b) head m)))
 
-(define (add-tactical-move! b m)
+(define-inline (add-tactical-move! b m)
   (let ([ head (add1 (tactical-head b)) ])
     (set-tactical-head! b head)
     (vector-set! (tactical-moves b) head m)))
