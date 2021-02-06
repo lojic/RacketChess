@@ -30,6 +30,7 @@
     (check-equal? (evaluate b) 0)
     ;; Remove the White Queen
     (bytes-set! (board-squares b) 94 empty-square)
-    (check-equal? (evaluate b) -900))
+    ;; Depends on pst value
+    (check-equal? (evaluate b) -895))
 
   )

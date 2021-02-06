@@ -8,7 +8,15 @@
 
 (provide order-moves!)
 
+;; TODO I don't think we should call (vector-sort!) here - maybe a selection sort instead
 (define (order-moves! b)
+  (define-inline (mvv-lva m)
+    (let ([ victim (move-captured-piece m) ])
+      (if victim
+          (- (abs (piece-value b victim (move-dst-idx m)))
+             (abs (piece-value b (move-src m) (move-src-idx m))))
+          0)))
+
   (vector-sort! (tactical-moves b)
                 > ; Reverse the sort to get the highest values first
                 0
@@ -18,10 +26,3 @@
                 ;; i.e. most valuable victim - least valuable attacker
                 ;; (MVV-LVA)
                 #:key mvv-lva))
-
-(define-inline (mvv-lva m)
-  (let ([ victim (move-captured-piece m) ])
-    (if victim
-        (- (abs (piece-value victim))
-           (abs (piece-value (move-src m))))
-        0)))

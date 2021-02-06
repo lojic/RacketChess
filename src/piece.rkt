@@ -1,41 +1,14 @@
 #lang racket
 
+(require "./board.rkt"
+         "./piece-square-tables.rkt")
 (require racket/performance-hint)
 
-(provide black-bishop
-         black-king
-         black-knight
-         black-pawn
-         black-queen
-         black-rook
-         empty-square
-         has-moved?
-         is-bishop?
-         is-black?
-         is-black-king?
-         is-king?
-         is-knight?
-         is-other-color?
-         is-other-piece?
-         is-own-piece?
-         is-pawn?
-         is-piece?
-         is-queen?
-         is-right-color-piece?
-         is-rook?
-         is-white?
-         is-white-king?
-         piece-moved-bit
-         piece-moved-mask
-         piece-symbol
-         piece-type
-         piece-value
-         symbol-piece
-         white-bishop
-         white-king
-         white-knight
-         white-pawn
-         white-queen
+(provide black-bishop black-king black-knight black-pawn black-queen black-rook empty-square
+         has-moved? is-bishop? is-black? is-black-king? is-king? is-knight? is-other-color?
+         is-other-piece? is-own-piece? is-pawn? is-piece? is-queen? is-right-color-piece? is-rook?
+         is-white? is-white-king? piece-moved-bit piece-moved-mask piece-symbol piece-type
+         piece-value symbol-piece white-bishop white-king white-knight white-pawn white-queen
          white-rook)
 
 ;; Chess Piece
@@ -178,21 +151,46 @@
 (define-inline (piece-type piece)
   (bitwise-and piece piece-type-bits))
 
-(define-inline (piece-value piece)
+;; https://www.chessprogramming.org/Simplified_Evaluation_Function
+;; 1. Avoid exchanging one minor piece for three pawns.
+;; 2. Encourage the engine to have the bishop pair.
+;; 3. Avoid exchanging of two minor pieces for a rook and a pawn.
+;; 4. Stick to human chess experience.
+;;
+;;    B > N > 3P
+;;    B + N = R + 1.5P
+;;    Q + P = 2R
+(define (piece-value b piece idx)
   (let ([ type (bitwise-and piece piece-type-bits) ])
     (if (is-white? piece)
-        (cond [ (= type #b001)   100 ]
-              [ (= type #b010)   300 ]
-              [ (= type #b011)   300 ]
-              [ (= type #b100)   500 ]
-              [ (= type #b101)   900 ]
-              [ (= type #b110) 10000 ])
-        (cond [ (= type #b001)   -100 ]
-              [ (= type #b010)   -300 ]
-              [ (= type #b011)   -300 ]
-              [ (= type #b100)   -500 ]
-              [ (= type #b101)   -900 ]
-              [ (= type #b110) -10000 ]))))
+        (cond [ (= type #b001)
+                (+ 100 (vector-ref pawn-pst-white idx)) ]
+              [ (= type #b010)
+                (+ 320 (vector-ref knight-pst-white idx)) ]
+              [ (= type #b011)
+                (+ 330 (vector-ref bishop-pst-white idx)) ]
+              [ (= type #b100)
+                (+ 500 (vector-ref rook-pst-white idx)) ]
+              [ (= type #b101)
+                (+ 900 (vector-ref queen-pst-white idx)) ]
+              [ else
+                (if (is-end-game? b)
+                    (vector-ref king-end-pst-white idx)
+                    (vector-ref king-middle-pst-white idx)) ])
+        (- (cond [ (= type #b001)
+                   (+ 100 (vector-ref pawn-pst-black idx)) ]
+                 [ (= type #b010)
+                   (+ 320 (vector-ref knight-pst-black idx)) ]
+                 [ (= type #b011)
+                   (+ 330 (vector-ref bishop-pst-black idx)) ]
+                 [ (= type #b100)
+                   (+ 500 (vector-ref rook-pst-black idx)) ]
+                 [ (= type #b101)
+                   (+ 900 (vector-ref queen-pst-black idx)) ]
+                 [ else
+                   (if (is-end-game? b)
+                       (vector-ref king-end-pst-black idx)
+                       (vector-ref king-middle-pst-black idx)) ])))))
 
 (define (symbol-piece sym)
   (hash-ref symbol-pieces sym))
@@ -330,22 +328,23 @@
   (check-equal? (piece-symbol white-rook)   "R")
 
   ;; ------------------------------------------------------------------------------------------
-  ;; piece-value
+  ;; piece-value - dependent on the current values in piece-square-tables.rkt
   ;; ------------------------------------------------------------------------------------------
 
-  (check-equal? (piece-value black-pawn)   -100)
-  (check-equal? (piece-value black-knight) -300)
-  (check-equal? (piece-value black-bishop) -300)
-  (check-equal? (piece-value black-rook)   -500)
-  (check-equal? (piece-value black-queen)  -900)
-  (check-not-false (<= (piece-value black-king) -10000))
+  (let ([ b (create-board) ])
+    (check-equal? (piece-value b black-pawn   (pos->idx "e7"))  -80)
+    (check-equal? (piece-value b black-knight (pos->idx "g8")) -280)
+    (check-equal? (piece-value b black-bishop (pos->idx "f8")) -320)
+    (check-equal? (piece-value b black-rook   (pos->idx "h8")) -500)
+    (check-equal? (piece-value b black-queen  (pos->idx "d8")) -895)
+    (check-equal? (piece-value b black-king   (pos->idx "e8"))    0)
 
-  (check-equal? (piece-value white-pawn)   100)
-  (check-equal? (piece-value white-knight) 300)
-  (check-equal? (piece-value white-bishop) 300)
-  (check-equal? (piece-value white-rook)   500)
-  (check-equal? (piece-value white-queen)  900)
-  (check-not-false (>= (piece-value white-king) 10000))
+    (check-equal? (piece-value b white-pawn   (pos->idx "e2"))  80)
+    (check-equal? (piece-value b white-knight (pos->idx "g1")) 280)
+    (check-equal? (piece-value b white-bishop (pos->idx "f1")) 320)
+    (check-equal? (piece-value b white-rook   (pos->idx "h1")) 500)
+    (check-equal? (piece-value b white-queen  (pos->idx "d1")) 895)
+    (check-equal? (piece-value b white-king   (pos->idx "e1"))   0))
 
   ;; ------------------------------------------------------------------------------------------
   ;; symbol-piece

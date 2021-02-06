@@ -8,6 +8,7 @@
          get-ep-idx
          idx->pos
          init-moves!
+         is-end-game?
          pos->idx
          quiet-head
          quiet-moves
@@ -122,6 +123,10 @@
   (let ([ d (board-depth b) ])
     (vector-set! (board-quiet-head b) d -1)
     (vector-set! (board-tactical-head b) d -1)))
+
+(define-inline (is-end-game? b)
+  ;; TODO make this better!
+  (> (board-move-i b) 50))
 
 (define (pos->idx pos)
   (vector-member pos positions))
