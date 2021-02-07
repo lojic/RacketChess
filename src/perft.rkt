@@ -499,5 +499,24 @@
     (perft! b 1 obj)
     (check-equal? (counts-nodes obj) 7))
 
+  ;; Run file of tests
+  (let ([ obj (create-zero-counts) ])
+    (for ([ line (in-list (file->lines "../test-data/perftsuite.epd")) ])
+      (let* ([ lst (string-split line ";") ]
+             [ fen (string-trim (car lst)) ])
+        (let loop ([ lst (cdr lst) ])
+          (when (not (null? lst))
+            (let* ([ groups (regexp-match #px"^D(\\d) (\\d+)$" (string-trim (car lst))) ]
+                   [ depth  (string->number (second groups)) ]
+                   [ nodes  (string->number (third groups))  ])
+              (when (< depth (cond
+                              [ REALLY-LONG-TEST 7 ]
+                              [ LONG-TEST        6 ]
+                              [ else             5 ]))
+                (let ([ b (fen->board fen) ])
+                  (reset-counts! obj)
+                  (perft! b depth obj)
+                  (check-equal? (counts-nodes obj) nodes))))
+              (loop (cdr lst)))))))
 
   )
