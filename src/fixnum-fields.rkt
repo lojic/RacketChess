@@ -100,12 +100,11 @@
                (not (fx= (fxand fx flag-mask) 0)))
              ...
              (define (set-prefix-name? fx)
-               (fxior (fxlshift (fxand 1 flag-input-mask) from)
-                      (fxand    fx update-mask)))
+               (fxior (fxlshift 1 from)
+                      (fxand fx update-mask)))
              ...
              (define (unset-prefix-name? fx)
-               (fxior (fxlshift (fxand 0 flag-input-mask) from)
-                      (fxand    fx update-mask)))
+               (fxior 0 (fxand fx update-mask)))
              ...))))]))
 
 (module+ test
