@@ -4,6 +4,8 @@
 ;; efficiciency of storing all of the fields in a single fixnum
 ;; 
 ;; Original code contributed by: Jens Axel Søgaard
+;;
+;; TODO: ensure total width specified fits in a fixnum
 
 (require (for-syntax racket/syntax syntax/parse racket/fixnum)
          racket/fixnum
