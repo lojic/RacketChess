@@ -29,10 +29,10 @@
               [ b (create-board) ])
     (fen->board-placement!    b placement)
     (fen->board-active-color! b active-color)
-    (fen->board-castling!     b castling)
-    (fen->board-ep-target!    b ep-target)
     (fen->board-half-move!    b half-move)
     (fen->board-full-move!    b full-move active-color)
+    (fen->board-castling!     b castling)
+    (fen->board-ep-target!    b ep-target)
     b))
 
 (define (fen->board-active-color! b active-color)

@@ -16,6 +16,9 @@
 (define w4 (+ west west west west))
 
 (define (make-move! b m)
+  ;; Increment move-i
+  (set-board-move-i! b (add1 (board-move-i b)))
+
   (let* ([ squares (board-squares b)           ]
          [ white?  (board-whites-move? b)      ]
          [ piece   (move-src m)                ]
@@ -36,8 +39,7 @@
       ;; Player to move
       (set-board-whites-move?! b (not (board-whites-move? b)))
 
-      ;; Increment depth & move-i
-      (set-board-move-i! b (add1 (board-move-i b)))
+      ;; Increment depth
       (set-board-depth! b (add1 (board-depth b))))))
 
 ;; Returns the source piece (possibly modified)
@@ -86,7 +88,7 @@
      ;; passant capture idx
      [ (or (= dist n2) (= dist s2))
        ;; Set the EP target on the next level down
-       (set-ep-idx! b (+ src-idx (arithmetic-shift dist -1)) 1)
+       (set-ep-idx! b (+ src-idx (arithmetic-shift dist -1)))
        piece ]
 
      ;; Handle en passant capture
@@ -109,7 +111,6 @@
 (define (unmake-move! b m)
   ;; Decrement depth & move-i
   (set-board-depth! b (sub1 (board-depth b)))
-  (set-board-move-i! b (sub1 (board-move-i b)))
 
   ;; Player to move
   (set-board-whites-move?! b (not (board-whites-move? b)))
@@ -140,13 +141,17 @@
                 (bytes-set! squares dst-idx captured-piece) ])
 
         ;; Unmake quiet move
-        (bytes-set! squares dst-idx empty-square))
+        (begin
+          (bytes-set! squares dst-idx empty-square)
+          (when (is-pawn? piece)
+            ;; Reset EP square
+            (set-ep-idx! b 0))))
 
     (when (is-king? piece)
       (unmake-king-move! b squares m white? piece src-idx))
 
-    ;; Reset EP square for one level down
-    (set-ep-idx! b 0 1)))
+    ;; Decrement move-i
+    (set-board-move-i! b (sub1 (board-move-i b)))))
 
 (define (unmake-king-move! b squares m white? piece src-idx)
   ;; Revert king idx

@@ -142,14 +142,10 @@
 (define-inline (reset-depth! b)
   (set-board-depth! b 0))
 
-(define-inline (set-ep-idx! b v [delta #f])
-  (if delta
-      (vector-set! (board-ep-idx b)
-                   (+ (board-move-i b) delta)
-                   v)
-      (vector-set! (board-ep-idx b)
-                   (board-move-i b)
-                   v)))
+(define-inline (set-ep-idx! b v)
+  (vector-set! (board-ep-idx b)
+               (board-move-i b)
+               v))
 
 (define-inline (set-full-move! b full-move blacks-move?)
   (if blacks-move?
