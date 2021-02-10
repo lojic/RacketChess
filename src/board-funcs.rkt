@@ -16,11 +16,11 @@
 (define w4 (+ west west west west))
 
 (define (make-move! b m)
-  ;; Increment move-i
-  (set-board-move-i! b (add1 (board-move-i b)))
+  (push-game-state! b)
+  (set-ep-idx! b 0)
 
   (let* ([ squares (board-squares b)           ]
-         [ white?  (board-whites-move? b)      ]
+         [ white?  (is-whites-move? b)         ]
          [ piece   (move-src m)                ]
          [ src-idx (move-src-idx m)            ]
          [ dst-idx (move-dst-idx m)            ]
@@ -37,7 +37,7 @@
       (bytes-set! squares src-idx empty-square)
 
       ;; Player to move
-      (set-board-whites-move?! b (not (board-whites-move? b)))
+      (set-whites-move?! b (not (is-whites-move? b)))
 
       ;; Increment depth
       (set-board-depth! b (add1 (board-depth b))))))
@@ -46,8 +46,8 @@
 (define (make-king-move! b squares m white? piece src-idx dst-idx)
   ;; Update king idx
   (if white?
-      (set-board-white-king-idx! b dst-idx)
-      (set-board-black-king-idx! b dst-idx))
+      (set-white-king-idx! b dst-idx)
+      (set-black-king-idx! b dst-idx))
 
   ;; Handle castling
   (let ([ dist (- dst-idx src-idx) ])
@@ -112,11 +112,10 @@
   ;; Decrement depth & move-i
   (set-board-depth! b (sub1 (board-depth b)))
 
-  ;; Player to move
-  (set-board-whites-move?! b (not (board-whites-move? b)))
+  (pop-game-state! b)
 
   (let* ([ squares        (board-squares b)       ]
-         [ white?         (board-whites-move? b)  ]
+         [ white?         (is-whites-move? b)     ]
          [ src-idx        (move-src-idx m)        ]
          [ dst-idx        (move-dst-idx m)        ]
          [ captured-piece (move-captured-piece m) ]
@@ -141,23 +140,16 @@
                 (bytes-set! squares dst-idx captured-piece) ])
 
         ;; Unmake quiet move
-        (begin
-          (bytes-set! squares dst-idx empty-square)
-          (when (is-pawn? piece)
-            ;; Reset EP square
-            (set-ep-idx! b 0))))
+        (bytes-set! squares dst-idx empty-square))
 
     (when (is-king? piece)
-      (unmake-king-move! b squares m white? piece src-idx))
-
-    ;; Decrement move-i
-    (set-board-move-i! b (sub1 (board-move-i b)))))
+      (unmake-king-move! b squares m white? piece src-idx))))
 
 (define (unmake-king-move! b squares m white? piece src-idx)
   ;; Revert king idx
   (if white?
-      (set-board-white-king-idx! b src-idx)
-      (set-board-black-king-idx! b src-idx))
+      (set-white-king-idx! b src-idx)
+      (set-black-king-idx! b src-idx))
 
   ;; Handle un-castling. Since the rook must've had the moved bit
   ;; unset before the castle, we'll unset it after undoing the
@@ -201,7 +193,7 @@
     (printf " ~a |" (file->letter file)))
   (printf "\n")
 
-  (if (board-whites-move? b)
+  (if (is-whites-move? b)
       (printf "White's move\n")
       (printf "Black's move\n"))
 
@@ -211,8 +203,8 @@
     (when (> (get-ep-idx b) 0)
       (printf "EP Square: ~a. " (idx->pos (get-ep-idx b))))
     (printf "White king pos: ~a, Black king pos: ~a "
-            (idx->pos (board-white-king-idx b))
-            (idx->pos (board-black-king-idx b)))
+            (idx->pos (white-king-idx b))
+            (idx->pos (black-king-idx b)))
     ;; Castling rights
     (printf "Castling: ~a\n" (castling-rights-string b)))
   (printf "\n"))

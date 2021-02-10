@@ -19,7 +19,7 @@
                 (fen->board)))
 
   (when (and computer-plays-black?
-             (board-whites-move? b))
+             (is-whites-move? b))
     (make-human-move! b))
 
   (let loop ([ seconds seconds ])

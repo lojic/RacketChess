@@ -1,24 +1,34 @@
 #lang racket
 
-(require racket/performance-hint)
+(require "./fixnum-fields.rkt")
+(require racket/fixnum
+         racket/performance-hint)
 
-(provide create-board
+(provide black-king-idx
+         create-board
          file-rank->idx
          full-move
          get-ep-idx
          idx->pos
          init-moves!
          is-end-game?
+         is-whites-move?
+         pop-game-state!
          pos->idx
+         push-game-state!
          quiet-head
          quiet-moves
          reset-depth!
+         set-black-king-idx!
          set-ep-idx!
          set-full-move!
          set-quiet-head!
          set-tactical-head!
+         set-white-king-idx!
+         set-whites-move?!
          tactical-head
          tactical-moves
+         white-king-idx
          (struct-out board))
 
 ;; 10x12 Board Representation
@@ -38,13 +48,20 @@
 ;; FF FF FF FF FF FF FF FF FF FF | FF  FF  FF  FF  FF  FF  FF  FF  FF FF
 ;;                                      a   b   c   d   e   f   g   h
 
+(fixnum-fields state ([ ep-idx          7        ]
+                      [ black-king-idx  7        ]
+                      [ white-king-idx  7        ]
+                      [ whites-move     1 #:flag ]
+                      [ w-queenside-ok  1 #:flag ]
+                      [ w-kingside-ok   1 #:flag ]
+                      [ b-queenside-ok  1 #:flag ]
+                      [ b-kingside-ok   1 #:flag ]))
+
 (struct board (depth
                squares
-               whites-move?
-               black-king-idx
-               white-king-idx
                move-i
-               ep-idx         ; Indexed by move-i
+               game-state
+               game-stack
                quiet-moves    ; Indexed by depth
                quiet-head     ; Indexed by depth
                tactical-moves ; Indexed by depth
@@ -85,27 +102,30 @@
 (define max-depth 200)
 (define max-moves 250)
 
+(define-inline (black-king-idx b)
+  (state-black-king-idx (board-game-state b)))
+
 (define (create-board)
   (let ([ b (board
              0                             ; depth
              (bytes-copy initial-squares)  ; squares
-             #t                            ; whites-move?
-             25                            ; black-king-idx
-             95                            ; white-king-idx
              0                             ; move-i
-             (make-vector max-depth)       ; ep-idx
+             (create-game-state)           ; game-state
+             (make-fxvector max-moves)     ; game-stack
              (make-vector max-depth)       ; quiet-moves
              (make-vector max-depth)       ; quiet-head
              (make-vector max-depth)       ; tactical-moves
              (make-vector max-depth)) ])   ; tactical-head
     (for ([ i (in-range max-depth) ])
-      (vector-set! (board-ep-idx b) i 0)
       (vector-set! (board-quiet-head b) i -1)
       (vector-set! (board-quiet-moves b) i (make-vector max-moves))
       (vector-set! (board-tactical-head b) i -1)
       (vector-set! (board-tactical-moves b) i (make-vector max-moves)))
 
     b))
+
+(define (create-game-state)
+  (make-state 0 25 95 1 1 1 1 1))
 
 (define-inline (file-rank->idx file rank)
   (+ 21 file (* rank 10)))
@@ -114,7 +134,7 @@
   (add1 (arithmetic-shift (board-move-i b) -1)))
 
 (define-inline (get-ep-idx b)
-  (vector-ref (board-ep-idx b) (board-move-i b)))
+  (state-ep-idx (board-game-state b)))
 
 (define (idx->pos idx)
   (vector-ref positions idx))
@@ -128,8 +148,25 @@
   ;; TODO make this better!
   (> (board-move-i b) 50))
 
+(define-inline (is-whites-move? b)
+  (state-whites-move? (board-game-state b)))
+
+;; Decrement move-i and pop the game state off the stack
+(define (pop-game-state! b)
+  (let* ([ move-i (sub1 (board-move-i b))                    ]
+         [ state  (fxvector-ref (board-game-stack b) move-i) ])
+    (set-board-game-state! b state)
+    (set-board-move-i! b move-i)))
+
 (define (pos->idx pos)
   (vector-member pos positions))
+
+;; Push the game state onto the stack and increment move-i
+(define (push-game-state! b)
+  (let ([ state  (board-game-state b) ]
+        [ move-i (board-move-i b)     ])
+    (fxvector-set! (board-game-stack b) move-i state)
+    (set-board-move-i! b (add1 move-i))))
 
 (define-inline (quiet-head b [ d #f ])
   (vector-ref (board-quiet-head b)
@@ -142,10 +179,13 @@
 (define-inline (reset-depth! b)
   (set-board-depth! b 0))
 
+(define-inline (set-black-king-idx! b idx)
+  (let ([ state (board-game-state b) ])
+    (set-board-game-state! b
+                           (update-state-black-king-idx state idx))))
+
 (define-inline (set-ep-idx! b v)
-  (vector-set! (board-ep-idx b)
-               (board-move-i b)
-               v))
+  (set-board-game-state! b (update-state-ep-idx (board-game-state b) v)))
 
 (define-inline (set-full-move! b full-move blacks-move?)
   (if blacks-move?
@@ -162,6 +202,19 @@
                (if d d (board-depth b))
                v))
 
+(define-inline (set-white-king-idx! b idx)
+  (let ([ state (board-game-state b) ])
+    (set-board-game-state! b
+                           (update-state-white-king-idx state idx))))
+
+(define-inline (set-whites-move?! b bool)
+  (let ([ state (board-game-state b) ])
+    (set-board-game-state!
+     b
+     (if bool
+         (set-state-whites-move? state)
+         (unset-state-whites-move? state)))))
+
 (define-inline (tactical-head b [ d #f ])
   (vector-ref (board-tactical-head b)
               (if d d (board-depth b))))
@@ -169,6 +222,9 @@
 (define-inline (tactical-moves b [ d #f ])
   (vector-ref (board-tactical-moves b)
               (if d d (board-depth b))))
+
+(define-inline (white-king-idx b)
+  (state-white-king-idx (board-game-state b)))
 
 (module+ test
   (require rackunit)
@@ -185,23 +241,19 @@
     (check-equal? (bytes-length (board-squares b)) (* 10 12))
 
     ;; whites-move?
-    (check-not-false (board-whites-move? b))
+    (check-not-false (is-whites-move? b))
 
     ;; black-king-idx
-    (check-equal? (board-black-king-idx b) 25)
+    (check-equal? (black-king-idx b) 25)
 
     ;; white-king-idx
-    (check-equal? (board-white-king-idx b) 95)
+    (check-equal? (white-king-idx b) 95)
 
     ;; move-i
     (check-equal? (board-move-i b) 0)
 
     ;; ep-idx
-    (check-equal? (vector-length (board-ep-idx b)) max-depth)
-    (for ([ i (in-range max-depth) ])
-      (set-board-depth! b i)
-      (check-equal? (get-ep-idx b) 0))
-    (set-board-depth! b 0)
+    (check-equal? (get-ep-idx b) 0)
 
     ;; moves
     (check-equal? (vector-length (board-quiet-head b)) max-depth)

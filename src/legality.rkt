@@ -16,15 +16,15 @@
   ;; Note, the move has already been made, so the board will show it's
   ;; the opposite color's move, than the color we're checking :)
   (let-values ([ (white? king-idx other-king-idx own? enemy?)
-                 (if (board-whites-move? b)
+                 (if (is-whites-move? b)
                      (values #f
-                             (board-black-king-idx b)
-                             (board-white-king-idx b)
+                             (black-king-idx b)
+                             (white-king-idx b)
                              is-black?
                              is-white?)
                      (values #t
-                             (board-white-king-idx b)
-                             (board-black-king-idx b)
+                             (white-king-idx b)
+                             (black-king-idx b)
                              is-white?
                              is-black?)) ])
     (not

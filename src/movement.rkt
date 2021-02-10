@@ -22,7 +22,7 @@
 ;; --------------------------------------------------------------------------------------------
 
 (define (generate-moves! b #:quiet-moves? [ quiet-moves? #t ])
-  (define is-white? (board-whites-move? b))
+  (define is-white? (is-whites-move? b))
 
   (init-moves! b)
 

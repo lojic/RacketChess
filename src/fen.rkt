@@ -36,8 +36,8 @@
     b))
 
 (define (fen->board-active-color! b active-color)
-  (cond [ (string=? "w" active-color) (set-board-whites-move?! b #t) ]
-        [ (string=? "b" active-color) (set-board-whites-move?! b #f) ]
+  (cond [ (string=? "w" active-color) (set-whites-move?! b #t) ]
+        [ (string=? "b" active-color) (set-whites-move?! b #f) ]
         [ else (error "fen->board-active-color!: invalid active color") ]))
 
 (define (fen->board-castling! b castling)
@@ -82,7 +82,7 @@
               (when idx (set-piece-has-moved! b idx))) ]
           [ else
             ;; No castling rights, so mark the white-king as having moved
-            (set-piece-has-moved! b (board-white-king-idx b)) ]))
+            (set-piece-has-moved! b (white-king-idx b)) ]))
 
   ;; Black castling ---------------------------------------------------------------------------
   (define (get-black-k-rook-idx)
@@ -120,7 +120,7 @@
               (when idx (set-piece-has-moved! b idx))) ]
           [ else
             ;; No castling rights, so mark the black-king as having moved
-            (set-piece-has-moved! b (board-black-king-idx b)) ]))
+            (set-piece-has-moved! b (black-king-idx b)) ]))
 
   (if (regexp-match? #px"^([KQkq]+|-)$" castling)
       (begin
@@ -167,8 +167,8 @@
   (when (not (is-king? piece)) (error "fen->board-set-king-pos!: not a king"))
 
   (if (is-white? piece)
-      (set-board-white-king-idx! b idx)
-      (set-board-black-king-idx! b idx)))
+      (set-white-king-idx! b idx)
+      (set-black-king-idx! b idx)))
 
 ;; --------------------------------------------------------------------------------------------
 ;; Create a FEN record to represent a board
@@ -188,7 +188,7 @@
 
 ;; Return active color. "w" => white's move. "b" => black's move.
 (define (board->fen-active-color b)
-  (if (board-whites-move? b)
+  (if (is-whites-move? b)
       "w"
       "b"))
 

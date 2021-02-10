@@ -44,11 +44,11 @@
            [ wstr (third groups) ]
            [ bstr (fourth groups) ])
       (let ([ m (pgn-move b wstr) ])
-        (printf "~a's move: " (if (board-whites-move? b) "White" "Black"))
+        (printf "~a's move: " (if (is-whites-move? b) "White" "Black"))
         (print-move m)
         (make-move! b m))
       (let ([ m (pgn-move b bstr) ])
-        (printf "~a's move: " (if (board-whites-move? b) "White" "Black"))
+        (printf "~a's move: " (if (is-whites-move? b) "White" "Black"))
         (print-move m)
         (make-move! b m))
       (printf "\n"))))
@@ -65,7 +65,7 @@
         (match-let* ([ (list pat func) (car lst)              ]
                      [ groups          (regexp-match pat str) ])
           (if groups
-              (let ([ m (func b (board-whites-move? b) (cdr groups)) ])
+              (let ([ m (func b (is-whites-move? b) (cdr groups)) ])
                 (if (member m moves)
                     m
                     (begin

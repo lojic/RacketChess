@@ -17,7 +17,7 @@
               (if (= piece empty-square)
                   0
                   (piece-value b piece idx)))) ])
-    (if (board-whites-move? b)
+    (if (is-whites-move? b)
         score
         (- score))))
 
