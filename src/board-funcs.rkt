@@ -1,8 +1,10 @@
 #lang racket
 
-(require "./board.rkt")
-(require "./piece.rkt")
-(require "./move.rkt")
+(require "./board.rkt"
+         "./piece.rkt"
+         "./move.rkt"
+         "./state.rkt")
+(require debug/repl)
 
 (provide make-move!
          print-board
@@ -16,24 +18,33 @@
 (define w4 (+ west west west west))
 
 (define (make-move! b m)
+  ;; Save game state and increment move-i
   (push-game-state! b)
+
+  ;; Reset EP square
   (set-ep-idx! b 0)
 
-  (let* ([ squares (board-squares b)           ]
-         [ white?  (is-whites-move? b)         ]
-         [ piece   (move-src m)                ]
-         [ src-idx (move-src-idx m)            ]
-         [ dst-idx (move-dst-idx m)            ]
-         [ dst     (bytes-ref squares dst-idx) ])
+  (let* ([ squares    (board-squares b)           ]
+         [ white?     (is-whites-move? b)         ]
+         [ castle-ok? (may-castle? b white?)      ]
+         [ piece      (move-src m)                ]
+         [ src-idx    (move-src-idx m)            ]
+         [ dst-idx    (move-dst-idx m)            ]
+         [ dst        (bytes-ref squares dst-idx) ])
     (let ([ piece
             (cond [ (is-pawn? piece)
                     (make-pawn-move! b squares m white? piece src-idx dst-idx) ]
                   [ (is-king? piece)
-                    (make-king-move! b squares m white? piece src-idx dst-idx) ]
+                    (make-king-move! b squares m white? castle-ok? piece src-idx dst-idx)
+                    piece ]
                   [ else piece ])])
 
+      ;; Rook castling revocations
+      (when (or castle-ok? (may-castle? b (not white?)))
+        (revoke-rook-castling! b white? src-idx dst-idx))
+
       ;; Move the piece
-      (bytes-set! squares dst-idx (bitwise-ior piece piece-moved-bit))
+      (bytes-set! squares dst-idx piece)
       (bytes-set! squares src-idx empty-square)
 
       ;; Player to move
@@ -42,12 +53,54 @@
       ;; Increment depth
       (set-board-depth! b (add1 (board-depth b))))))
 
+(define (revoke-rook-castling! b white? src-idx dst-idx)
+  (let ([ s (board-game-state b) ])
+    (if white?
+        (begin
+          ;; Moving white queenside rook
+          (when (and (= 91 src-idx) (state-w-queenside-ok? s))
+            (set! s (unset-state-w-queenside-ok? s)))
+
+          ;; Moving white kingside rook
+          (when (and (= 98 src-idx) (state-w-kingside-ok? s))
+            (set! s (unset-state-w-kingside-ok? s)))
+
+          ;; Capturing black queenside rook
+          (when (and (= 21 dst-idx) (state-b-queenside-ok? s))
+            (set! s (unset-state-b-queenside-ok? s)))
+
+          ;; Capturing black kingside rook
+          (when (and (= 28 dst-idx) (state-b-kingside-ok? s))
+            (set! s (unset-state-b-kingside-ok? s))))
+
+        (begin
+          ;; Moving black queenside rook
+          (when (and (= 21 src-idx) (state-b-queenside-ok? s))
+            (set! s (unset-state-b-queenside-ok? s)))
+
+          ;; Moving black kingside rook
+          (when (and (= 28 src-idx) (state-b-kingside-ok? s))
+            (set! s (unset-state-b-kingside-ok? s)))
+
+          ;; Capturing white queenside rook
+          (when (and (= 91 dst-idx) (state-w-queenside-ok? s))
+            (set! s (unset-state-w-queenside-ok? s)))
+
+          ;; Capturing white kingside rook
+          (when (and (= 98 dst-idx) (state-w-kingside-ok? s))
+            (set! s (unset-state-w-kingside-ok? s)))))
+
+    (set-board-game-state! b s)))
+
 ;; Returns the source piece (possibly modified)
-(define (make-king-move! b squares m white? piece src-idx dst-idx)
+(define (make-king-move! b squares m white? castle-ok? piece src-idx dst-idx)
   ;; Update king idx
   (if white?
       (set-white-king-idx! b dst-idx)
       (set-black-king-idx! b dst-idx))
+
+  (when castle-ok?
+    (revoke-castling! b white?))
 
   ;; Handle castling
   (let ([ dist (- dst-idx src-idx) ])
@@ -55,8 +108,7 @@
             ;; Move king side rook
             (bytes-set! squares
                         (+ src-idx east)
-                        (bitwise-ior (bytes-ref squares (+ src-idx e3))
-                                     piece-moved-bit))
+                        (bytes-ref squares (+ src-idx e3)))
             (bytes-set! squares
                         (+ src-idx e3)
                         empty-square) ]
@@ -65,13 +117,10 @@
             ;; Move queenside rook
             (bytes-set! squares
                         (+ src-idx west)
-                        (bitwise-ior (bytes-ref squares (+ src-idx w4))
-                                     piece-moved-bit))
+                        (bytes-ref squares (+ src-idx w4)))
             (bytes-set! squares
                         (+ src-idx w4)
-                        empty-square) ])
-
-    piece))
+                        empty-square) ])))
 
 ;; Returns the source piece (possibly modified)
 (define (make-pawn-move! b squares m white? piece src-idx dst-idx)
@@ -101,17 +150,18 @@
        piece ]
 
      ;; Handle promotion - return the promoted piece instead of the
-     ;; pawn. Mark the piece as having moved.
+     ;; pawn.
      [ (move-promoted-piece m)
-       (bitwise-ior (move-promoted-piece m) piece-moved-bit) ]
+       (move-promoted-piece m) ]
 
      ;; None of the above, just return the piece
      [ else piece ])))
 
 (define (unmake-move! b m)
-  ;; Decrement depth & move-i
+  ;; Decrement depth
   (set-board-depth! b (sub1 (board-depth b)))
 
+  ;; Restore game state and decrement move-i
   (pop-game-state! b)
 
   (let* ([ squares        (board-squares b)       ]
@@ -146,26 +196,18 @@
       (unmake-king-move! b squares m white? piece src-idx))))
 
 (define (unmake-king-move! b squares m white? piece src-idx)
-  ;; Revert king idx
-  (if white?
-      (set-white-king-idx! b src-idx)
-      (set-black-king-idx! b src-idx))
-
-  ;; Handle un-castling. Since the rook must've had the moved bit
-  ;; unset before the castle, we'll unset it after undoing the
-  ;; castle. We don't need to do this for the king since we store the
-  ;; source piece in the move.
+  ;; Handle un-castling.
   (cond [ (move-is-castle-kingside? m)
           ;; Move rook back
           (bytes-set! squares
                       (+ src-idx e3)
-                      (bitwise-and (bytes-ref squares (+ src-idx east)) piece-moved-mask))
+                      (bytes-ref squares (+ src-idx east)))
           (bytes-set! squares (+ src-idx east) empty-square) ]
         [ (move-is-castle-queenside? m)
           ;; Move rook back
           (bytes-set! squares
                       (+ src-idx w4)
-                      (bitwise-and (bytes-ref squares (+ src-idx west)) piece-moved-mask))
+                      (bytes-ref squares (+ src-idx west)))
           (bytes-set! squares (+ src-idx west) empty-square) ]))
 
 (define (print-board b #:full? [ full? #f ])
@@ -211,33 +253,13 @@
 
 (define (castling-rights-string b)
   (define squares (board-squares b))
-  (let* ([ bk  (bytes-ref squares (pos->idx "e8")) ]
-         [ bk-ok (and (is-king? bk) (is-black? bk) (not (has-moved? bk))) ]
-         [ bkr (bytes-ref squares (pos->idx "h8")) ]
-         [ bkr-ok (and (is-rook? bkr) (is-black? bkr) (not (has-moved? bkr))) ]
-         [ bqr (bytes-ref squares (pos->idx "a8")) ]
-         [ bqr-ok (and (is-rook? bqr) (is-black? bqr) (not (has-moved? bqr))) ]
-         [ wk  (bytes-ref squares (pos->idx "e1")) ]
-         [ wk-ok (and (is-king? wk) (is-white? wk) (not (has-moved? wk))) ]
-         [ wkr (bytes-ref squares (pos->idx "h1")) ]
-         [ wkr-ok (and (is-rook? wkr) (is-white? wkr) (not (has-moved? wkr))) ]
-         [ wqr (bytes-ref squares (pos->idx "a1")) ]
-         [ wqr-ok (and (is-rook? wqr) (is-white? wqr) (not (has-moved? wqr))) ]
-         [ str (string-append
-                ;; White
-                (if wk-ok
-                    (cond [ (and wkr-ok wqr-ok) "KQ" ]
-                          [ wkr-ok              "K"  ]
-                          [ wqr-ok              "Q"  ]
-                          [ else                ""   ])
-                    "")
-                ;; Black
-                (if bk-ok
-                    (cond [ (and bkr-ok bqr-ok) "kq" ]
-                          [ bkr-ok              "k"  ]
-                          [ bqr-ok              "q"  ]
-                          [ else                ""   ])
-                    "")) ])
+  (let* ([ s (board-game-state b) ]
+         [ str
+           (string-append
+            (if (state-w-kingside-ok? s) "K" "")
+            (if (state-w-queenside-ok? s) "Q" "")
+            (if (state-b-kingside-ok? s) "k" "")
+            (if (state-b-queenside-ok? s) "q" "")) ])
     (if (non-empty-string? str)
         str
         "-")))
@@ -258,6 +280,5 @@
 
 (module+ test
   (require rackunit)
-
 
   )

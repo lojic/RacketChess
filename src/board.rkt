@@ -1,6 +1,6 @@
 #lang racket
 
-(require "./fixnum-fields.rkt")
+(require "./state.rkt")
 (require racket/fixnum
          racket/performance-hint)
 
@@ -13,12 +13,14 @@
          init-moves!
          is-end-game?
          is-whites-move?
+         may-castle?
          pop-game-state!
          pos->idx
          push-game-state!
          quiet-head
          quiet-moves
          reset-depth!
+         revoke-castling!
          set-black-king-idx!
          set-ep-idx!
          set-full-move!
@@ -36,26 +38,17 @@
 ;;
 ;; FF FF FF FF FF FF FF FF FF FF | FF  FF  FF  FF  FF  FF  FF  FF  FF FF
 ;; FF FF FF FF FF FF FF FF FF FF | FF  FF  FF  FF  FF  FF  FF  FF  FF FF
-;; FF 44 42 43 45 46 43 42 44 FF | FF 022 023 024 025 026 027 028 029 FF 8
-;; FF 41 41 41 41 41 41 41 41 FF | FF 032 033 034 035 036 037 038 039 FF 7
-;; FF 00 00 00 00 00 00 00 00 FF | FF 042 043 044 045 046 047 048 049 FF 6
-;; FF 00 00 00 00 00 00 00 00 FF | FF 052 053 054 055 056 057 058 059 FF 5
-;; FF 00 00 00 00 00 00 00 00 FF | FF 062 063 064 065 066 067 068 069 FF 4
-;; FF 00 00 00 00 00 00 00 00 FF | FF 072 073 074 075 076 077 078 079 FF 3
-;; FF 81 81 81 81 81 81 81 81 FF | FF 082 083 084 085 086 087 088 089 FF 2
-;; FF 84 82 83 85 88 83 82 84 FF | FF 092 093 094 095 096 097 098 099 FF 1
+;; FF 44 42 43 45 46 43 42 44 FF | FF 021 022 023 024 025 026 027 028 FF 8
+;; FF 41 41 41 41 41 41 41 41 FF | FF 031 032 033 034 035 036 037 038 FF 7
+;; FF 00 00 00 00 00 00 00 00 FF | FF 041 042 043 044 045 046 047 048 FF 6
+;; FF 00 00 00 00 00 00 00 00 FF | FF 051 052 053 054 055 056 057 058 FF 5
+;; FF 00 00 00 00 00 00 00 00 FF | FF 061 062 063 064 065 066 067 068 FF 4
+;; FF 00 00 00 00 00 00 00 00 FF | FF 071 072 073 074 075 076 077 078 FF 3
+;; FF 81 81 81 81 81 81 81 81 FF | FF 081 082 083 084 085 086 087 088 FF 2
+;; FF 84 82 83 85 88 83 82 84 FF | FF 091 092 093 094 095 096 097 098 FF 1
 ;; FF FF FF FF FF FF FF FF FF FF | FF  FF  FF  FF  FF  FF  FF  FF  FF FF
 ;; FF FF FF FF FF FF FF FF FF FF | FF  FF  FF  FF  FF  FF  FF  FF  FF FF
 ;;                                      a   b   c   d   e   f   g   h
-
-(fixnum-fields state ([ ep-idx          7        ]
-                      [ black-king-idx  7        ]
-                      [ white-king-idx  7        ]
-                      [ whites-move     1 #:flag ]
-                      [ w-queenside-ok  1 #:flag ]
-                      [ w-kingside-ok   1 #:flag ]
-                      [ b-queenside-ok  1 #:flag ]
-                      [ b-kingside-ok   1 #:flag ]))
 
 (struct board (depth
                squares
@@ -102,15 +95,12 @@
 (define max-depth 200)
 (define max-moves 250)
 
-(define-inline (black-king-idx b)
-  (state-black-king-idx (board-game-state b)))
-
 (define (create-board)
   (let ([ b (board
              0                             ; depth
              (bytes-copy initial-squares)  ; squares
              0                             ; move-i
-             (create-game-state)           ; game-state
+             (initial-game-state pos->idx) ; game-state
              (make-fxvector max-moves)     ; game-stack
              (make-vector max-depth)       ; quiet-moves
              (make-vector max-depth)       ; quiet-head
@@ -124,17 +114,11 @@
 
     b))
 
-(define (create-game-state)
-  (make-state 0 25 95 1 1 1 1 1))
-
 (define-inline (file-rank->idx file rank)
   (+ 21 file (* rank 10)))
 
 (define-inline (full-move b)
   (add1 (arithmetic-shift (board-move-i b) -1)))
-
-(define-inline (get-ep-idx b)
-  (state-ep-idx (board-game-state b)))
 
 (define (idx->pos idx)
   (vector-ref positions idx))
@@ -147,9 +131,6 @@
 (define-inline (is-end-game? b)
   ;; TODO make this better!
   (> (board-move-i b) 50))
-
-(define-inline (is-whites-move? b)
-  (state-whites-move? (board-game-state b)))
 
 ;; Decrement move-i and pop the game state off the stack
 (define (pop-game-state! b)
@@ -179,14 +160,6 @@
 (define-inline (reset-depth! b)
   (set-board-depth! b 0))
 
-(define-inline (set-black-king-idx! b idx)
-  (let ([ state (board-game-state b) ])
-    (set-board-game-state! b
-                           (update-state-black-king-idx state idx))))
-
-(define-inline (set-ep-idx! b v)
-  (set-board-game-state! b (update-state-ep-idx (board-game-state b) v)))
-
 (define-inline (set-full-move! b full-move blacks-move?)
   (if blacks-move?
       (set-board-move-i! b (add1 (arithmetic-shift (sub1 full-move) 1)))
@@ -202,19 +175,6 @@
                (if d d (board-depth b))
                v))
 
-(define-inline (set-white-king-idx! b idx)
-  (let ([ state (board-game-state b) ])
-    (set-board-game-state! b
-                           (update-state-white-king-idx state idx))))
-
-(define-inline (set-whites-move?! b bool)
-  (let ([ state (board-game-state b) ])
-    (set-board-game-state!
-     b
-     (if bool
-         (set-state-whites-move? state)
-         (unset-state-whites-move? state)))))
-
 (define-inline (tactical-head b [ d #f ])
   (vector-ref (board-tactical-head b)
               (if d d (board-depth b))))
@@ -223,8 +183,65 @@
   (vector-ref (board-tactical-moves b)
               (if d d (board-depth b))))
 
+;; --------------------------------------------------------------------------------------------
+;; Convenience functions for getting/setting state fields through the
+;; board struct. When multiple fields need to be manipulated, it may
+;; be more efficient to obtain the state fixnum, and then make
+;; multiple calls.
+;; --------------------------------------------------------------------------------------------
+
+(define-inline (black-king-idx b)
+  (state-black-king-idx (board-game-state b)))
+
+(define-inline (get-ep-idx b)
+  (state-ep-idx (board-game-state b)))
+
+(define-inline (is-whites-move? b)
+  (state-whites-move? (board-game-state b)))
+
+(define-inline (may-castle? b white?)
+  (let ([ s (board-game-state b) ])
+    (if white?
+        (or (state-w-kingside-ok? s) (state-w-queenside-ok? s))
+        (or (state-b-kingside-ok? s) (state-b-queenside-ok? s)))))
+
+(define-inline (revoke-castling! b white?)
+  (if white?
+      (begin
+        (set-board-game-state! b
+                               (unset-state-w-queenside-ok?
+                                (unset-state-w-kingside-ok?
+                                 (board-game-state b)))))
+      (begin
+        (set-board-game-state! b
+                               (unset-state-b-queenside-ok?
+                                (unset-state-b-kingside-ok?
+                                 (board-game-state b)))))))
+
+(define-inline (set-black-king-idx! b idx)
+  (set-board-game-state!
+   b
+   (update-state-black-king-idx (board-game-state b) idx)))
+
+(define-inline (set-ep-idx! b v)
+  (set-board-game-state! b (update-state-ep-idx (board-game-state b) v)))
+
+(define-inline (set-white-king-idx! b idx)
+  (set-board-game-state!
+   b
+   (update-state-white-king-idx (board-game-state b) idx)))
+
+(define-inline (set-whites-move?! b bool)
+  (set-board-game-state!
+   b
+   (if bool
+       (set-state-whites-move? (board-game-state b))
+       (unset-state-whites-move? (board-game-state b)))))
+
 (define-inline (white-king-idx b)
   (state-white-king-idx (board-game-state b)))
+
+;; --------------------------------------------------------------------------------------------
 
 (module+ test
   (require rackunit)

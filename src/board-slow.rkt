@@ -5,8 +5,7 @@
 (require "./board.rkt")
 (require "./piece.rkt")
 
-(provide get-pieces-file-rank
-         set-piece-has-moved!)
+(provide get-pieces-file-rank)
 
 ;; Return a list of all pieces on the board in the following form:
 ;; ( (piece file rank)
@@ -26,8 +25,3 @@
       (if (pred? piece)
           (cons (list piece (string-ref pos 0) (string-ref pos 1)) result)
           result))))
-
-(define (set-piece-has-moved! b idx)
-  (let ([ squares (board-squares b) ])
-    (bytes-set! squares idx (bitwise-ior (bytes-ref squares idx)
-                                         piece-moved-bit))))

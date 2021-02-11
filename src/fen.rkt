@@ -5,7 +5,8 @@
 (require "./board.rkt"
          "./board-funcs.rkt"
          "./board-slow.rkt"
-         "./piece.rkt")
+         "./piece.rkt"
+         "./state.rkt")
 
 (require debug/repl)
 
@@ -41,92 +42,25 @@
         [ else (error "fen->board-active-color!: invalid active color") ]))
 
 (define (fen->board-castling! b castling)
-  (define rooks (get-pieces-file-rank b is-rook?))
+  (let ([ s (board-game-state b) ])
+    ;; Unset all castling
+    (set! s (unset-state-b-kingside-ok? s))
+    (set! s (unset-state-b-queenside-ok? s))
+    (set! s (unset-state-w-kingside-ok? s))
+    (set! s (unset-state-w-queenside-ok? s))
 
-  (define (tuple->idx tuple)
-    (pos->idx (format "~a~a" (second tuple) (third tuple))))
-
-  ;; White castling ---------------------------------------------------------------------------
-  (define (get-white-k-rook-idx)
-    (let ([ lst (filter (λ (tuple)
-                          (and (is-white? (first tuple))
-                               (not (and (char=? #\a (second tuple))
-                                         (char=? #\1 (third tuple))))))
-                          rooks) ])
-      (if (= 1 (length lst))
-          (tuple->idx (car lst))
-          #f)))
-
-  (define (get-white-q-rook-idx)
-    (let ([ lst (filter (λ (tuple)
-                          (and (is-white? (first tuple))
-                               (not (and (char=? #\h (second tuple))
-                                         (char=? #\1 (third tuple))))))
-                          rooks) ])
-      (if (= 1 (length lst))
-          (tuple->idx (car lst))
-          #f)))
-
-  (define (white-castling)
-    (cond [ (and (string-contains? castling "K")
-                 (string-contains? castling "Q"))
-            ;; Full castling rights, nothing to do
-            (void) ]
-          [ (string-contains? castling "K")
-            ;; Only king side rights, so mark queen side rook as having moved
-            (let ([ idx (get-white-q-rook-idx) ])
-              (when idx (set-piece-has-moved! b idx))) ]
-          [ (string-contains? castling "Q")
-            ;; Only queen side rights, so mark king side rook as having moved
-            (let ([ idx (get-white-k-rook-idx) ])
-              (when idx (set-piece-has-moved! b idx))) ]
-          [ else
-            ;; No castling rights, so mark the white-king as having moved
-            (set-piece-has-moved! b (white-king-idx b)) ]))
-
-  ;; Black castling ---------------------------------------------------------------------------
-  (define (get-black-k-rook-idx)
-    (let ([ lst (filter (λ (tuple)
-                          (and (is-black? (first tuple))
-                               (not (and (char=? #\a (second tuple))
-                                         (char=? #\8 (third tuple))))))
-                          rooks) ])
-      (if (= 1 (length lst))
-          (tuple->idx (car lst))
-          #f)))
-
-  (define (get-black-q-rook-idx)
-    (let ([ lst (filter (λ (tuple)
-                          (and (is-black? (first tuple))
-                               (not (and (char=? #\h (second tuple))
-                                         (char=? #\8 (third tuple))))))
-                          rooks) ])
-      (if (= 1 (length lst))
-          (tuple->idx (car lst))
-          #f)))
-
-  (define (black-castling)
-    (cond [ (and (string-contains? castling "k")
-                 (string-contains? castling "q"))
-            ;; Full castling rights, nothing to do
-            (void) ]
-          [ (string-contains? castling "k")
-            ;; Only king side rights, so mark queen side rook as having moved
-            (let ([ idx (get-black-q-rook-idx) ])
-              (when idx (set-piece-has-moved! b idx))) ]
-          [ (string-contains? castling "q")
-            ;; Only queen side rights, so mark king side rook as having moved
-            (let ([ idx (get-black-k-rook-idx) ])
-              (when idx (set-piece-has-moved! b idx))) ]
-          [ else
-            ;; No castling rights, so mark the black-king as having moved
-            (set-piece-has-moved! b (black-king-idx b)) ]))
-
-  (if (regexp-match? #px"^([KQkq]+|-)$" castling)
-      (begin
-        (white-castling)
-        (black-castling))
-      (error "fen->board-castling!: invalid castling string")))
+    (if (regexp-match? #px"^([KQkq]+|-)$" castling)
+        (begin
+          (when (string-contains? castling "K")
+            (set! s (set-state-w-kingside-ok? s)))
+          (when (string-contains? castling "Q")
+            (set! s (set-state-w-queenside-ok? s)))
+          (when (string-contains? castling "k")
+            (set! s (set-state-b-kingside-ok? s)))
+          (when (string-contains? castling "q")
+            (set! s (set-state-b-queenside-ok? s)))
+          (set-board-game-state! b s))
+        (error "fen->board-castling!: invalid castling string"))))
 
 (define (fen->board-ep-target! b ep-target)
   (when (not (string=? ep-target "-"))
@@ -198,40 +132,14 @@
 ;; k => Black may castle king side
 ;; q => Black may castle queen side
 (define (board->fen-castling b)
-  ;; Is the piece a king of the correct color that hasn't moved?
-  (define (king-ok? piece is-white?)
-    (and (is-king? piece)
-         (piece-ok? piece is-white?)))
-
-  ;; Is the piece a rook of the correct color that hasn't moved?
-  (define (rook-ok? piece is-white?)
-    (and (is-rook? piece)
-         (piece-ok? piece is-white?)))
-
-  ;; Is the piece of the correct color and hasn't moved?
-  (define (piece-ok? piece is-white?)
-    (and (is-right-color-piece? piece is-white?)
-         (not (has-moved? piece))))
-
-  (let* ([ squares (board-squares b)                   ]
-         [ wk      (bytes-ref squares (pos->idx "e1")) ]
-         [ wqr     (bytes-ref squares (pos->idx "a1")) ]
-         [ wkr     (bytes-ref squares (pos->idx "h1")) ]
-         [ bk      (bytes-ref squares (pos->idx "e8")) ]
-         [ bqr     (bytes-ref squares (pos->idx "a8")) ]
-         [ bkr     (bytes-ref squares (pos->idx "h8")) ]
-         [ wk-ok?  (king-ok? wk  #t)                   ]
-         [ wqr-ok? (rook-ok? wqr #t)                   ]
-         [ wkr-ok? (rook-ok? wkr #t)                   ]
-         [ bk-ok?  (king-ok? bk  #f)                   ]
-         [ bqr-ok? (rook-ok? bqr #f)                   ]
-         [ bkr-ok? (rook-ok? bkr #f)                   ]
-         [ castling (string-join
-                     (filter identity (list (if (and wk-ok? wkr-ok?) "K" #f)
-                                            (if (and wk-ok? wqr-ok?) "Q" #f)
-                                            (if (and bk-ok? bkr-ok?) "k" #f)
-                                            (if (and bk-ok? bqr-ok?) "q" #f)))
-                     "") ])
+  (let* ([ s (board-game-state b) ]
+         [ castling
+           (string-join
+            (filter identity (list (if (state-w-kingside-ok? s)  "K" #f)
+                                   (if (state-w-queenside-ok? s) "Q" #f)
+                                   (if (state-b-kingside-ok? s)  "k" #f)
+                                   (if (state-b-queenside-ok? s) "q" #f)))
+            "") ])
     (if (non-empty-string? castling)
         castling
         "-")))
@@ -313,19 +221,61 @@
   ;; fen->board!
   ;; ------------------------------------------------------------------------------------------
 
-  (let* ([ b (fen->board initial-fen) ])
-    (check-equal? (board->fen b) initial-fen))
+  (let* ([ fen "8/2pR1p2/1pP3kp/p7/5rp1/2P5/r3NKPP/5B1R w - - 0 34" ]
+         [ b   (fen->board fen)                                     ]
+         [ s   (board-game-state b)                                 ])
 
-  (let ([ fen "8/2pR1p2/1pP3kp/p7/5rp1/2P5/r3NKPP/5B1R w - - 0 34" ])
-    (check-equal? (board->fen (fen->board fen)) fen))
+    (check-equal? (board->fen b) fen)
+    (check-false (state-w-kingside-ok? s))
+    (check-false (state-w-queenside-ok? s))
+    (check-false (state-b-kingside-ok? s))
+    (check-false (state-b-queenside-ok? s))
+
+    (check-equal? (black-king-idx b) (pos->idx "g6"))
+    (check-equal? (white-king-idx b) (pos->idx "f2")))
+
+  ;;                                K  Q  k  q
+  (for ([ tuple (in-list '(("-"    #f #f #f #f)
+                           ("q"    #f #f #f #t)
+                           ("k"    #f #f #t #f)
+                           ("kq"   #f #f #t #t)
+                           ("Q"    #f #t #f #f)
+                           ("Qq"   #f #t #f #t)
+                           ("Qk"   #f #t #t #f)
+                           ("Qkq"  #f #t #t #t)
+                           ("K"    #t #f #f #f)
+                           ("Kq"   #t #f #f #t)
+                           ("Kk"   #t #f #t #f)
+                           ("Kkq"  #t #f #t #t)
+                           ("KQ"   #t #t #f #f)
+                           ("KQq"  #t #t #f #t)
+                           ("KQk"  #t #t #t #f)
+                           ("KQkq" #t #t #t #t))) ])
+    (let* ([ b (fen->board (format "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w ~a - 0 1" (car tuple))) ]
+           [ s(board-game-state b) ])
+      (if (second tuple)
+          (check-not-false (state-w-kingside-ok? s))
+          (check-false (state-w-kingside-ok? s)))
+      (if (third tuple)
+          (check-not-false (state-w-queenside-ok? s))
+          (check-false (state-w-queenside-ok? s)))
+      (if (fourth tuple)
+          (check-not-false (state-b-kingside-ok? s))
+          (check-false (state-b-kingside-ok? s)))
+      (if (fifth tuple)
+          (check-not-false (state-b-queenside-ok? s))
+          (check-false (state-b-queenside-ok? s)))))
 
   ;; ------------------------------------------------------------------------------------------
   ;; board->fen
   ;; ------------------------------------------------------------------------------------------
 
+  (let* ([ b (fen->board initial-fen) ])
+    (check-equal? (board->fen b) initial-fen))
+
   (let* ([ b       (create-board)    ]
          [ squares (board-squares b) ])
-    (check-equal? (board->fen b) "8/8/8/8/8/8/8/8 w - - 0 1")
+    (check-equal? (board->fen b) "8/8/8/8/8/8/8/8 w KQkq - 0 1")
     (bytes-set! squares (pos->idx "e1") white-king)
     (bytes-set! squares (pos->idx "a1") white-rook)
     (bytes-set! squares (pos->idx "h1") white-rook)

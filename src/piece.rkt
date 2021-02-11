@@ -4,11 +4,12 @@
          "./piece-square-tables.rkt")
 (require racket/performance-hint)
 
-(provide black-bishop black-king black-knight black-pawn black-queen black-rook empty-square
-         has-moved? is-bishop? is-black? is-black-king? is-king? is-knight? is-other-color?
-         is-other-piece? is-own-piece? is-pawn? is-piece? is-queen? is-right-color-piece? is-rook?
-         is-white? is-white-king? piece-moved-bit piece-moved-mask piece-symbol piece-type
-         piece-value symbol-piece white-bishop white-king white-knight white-pawn white-queen
+(provide black-bishop black-king black-knight black-pawn black-queen
+         black-rook empty-square is-bishop? is-black? is-black-king? is-king?
+         is-knight? is-other-color?  is-other-piece? is-own-piece? is-pawn?
+         is-piece? is-queen? is-right-color-piece? is-rook?  is-white?
+         is-white-king? piece-symbol piece-type piece-value symbol-piece
+         white-bishop white-king white-knight white-pawn white-queen
          white-rook)
 
 ;; Chess Piece
@@ -22,7 +23,7 @@
 ;;   101 Queen
 ;;   110 King
 ;;   111 Not used
-;; Bit 3 Piece has moved
+;; Bit 3 Not used
 ;; Bit 4 Not used
 ;; Bit 5 Not used
 ;; Bit 6 Black
@@ -31,8 +32,6 @@
 (define black-bit             #b01000000)
 (define color-bits            #b11000000)
 (define guard-square          #b11111111) ; Note: both black and white bits are set purposely :)
-(define piece-moved-bit       #b00001000)
-(define piece-moved-mask      #b11110111)
 (define piece-type-bits       #b00000111)
 (define piece-type-color-bits #b11000111)
 (define white-bit             #b10000000)
@@ -82,9 +81,6 @@
     (values (cdr pair) (car pair))))
 
 
-
-(define-inline (has-moved? piece)
-  (> (bitwise-and piece piece-moved-bit) #b0))
 
 (define-inline (is-bishop? piece)
   (= (bitwise-and piece piece-type-bits) bishop-bits))
@@ -197,14 +193,6 @@
 
 (module+ test
   (require rackunit)
-
-  ;; has-moved? -------------------------------------------------------------------------------
-
-  (check-false (has-moved? black-king))
-  (check-not-false (has-moved? (bitwise-ior black-king piece-moved-bit)))
-
-  (check-false (has-moved? white-king))
-  (check-not-false (has-moved? (bitwise-ior white-king piece-moved-bit)))
 
   ;; ------------------------------------------------------------------------------------------
   ;; is-<color>? predicates

@@ -13,7 +13,8 @@
          "./move.rkt"
          "./movement.rkt"
          "./move-ordering.rkt"
-         "./pgn.rkt")
+         "./pgn.rkt"
+         "./state.rkt")
 
 (require racket/performance-hint)
 
@@ -391,8 +392,15 @@
   ;; here, hopefully now corrected with the results given by Steven
   ;; Edwards, July 18, 2015 https://www.chessprogramming.org/Perft_Results
   ;; ------------------------------------------------------------------------------------------
-  (let ([ obj (create-zero-counts) ]
-        [ b   (fen->board "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8") ])
+  (let* ([ obj (create-zero-counts) ]
+         [ b   (fen->board "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8") ]
+         [ s   (board-game-state b) ])
+
+    (check-not-false (state-w-kingside-ok? s))
+    (check-not-false (state-w-queenside-ok? s))
+    (check-false (state-b-kingside-ok? s))
+    (check-false (state-b-queenside-ok? s))
+
     ;; Depth 1
     (reset-counts! obj)
     (perft! b 1 obj)
@@ -456,8 +464,14 @@
 
   ;; From: http://talkchess.com/forum3/viewtopic.php?f=7&t=55787#p616236
   ;; Also from: http://www.rocechess.ch/perft.html
-  (let ([ obj (create-zero-counts) ]
-        [ b   (fen->board "n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1") ])
+  (let* ([ obj (create-zero-counts) ]
+         [ b   (fen->board "n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1") ]
+         [ s   (board-game-state b) ])
+
+    (check-false (state-w-kingside-ok? s))
+    (check-false (state-w-queenside-ok? s))
+    (check-false (state-b-kingside-ok? s))
+    (check-false (state-b-queenside-ok? s))
 
     ;; Depth 1
     (reset-counts! obj)
@@ -493,8 +507,15 @@
     )
 
   ;; From: http://talkchess.com/forum3/viewtopic.php?f=7&t=76466&p=881175#p881149
-  (let ([ obj (create-zero-counts) ]
-        [ b   (fen->board "8/8/8/8/3kpP1R/8/6K1/8 b - f3 0 1") ])
+  (let* ([ obj (create-zero-counts) ]
+         [ b   (fen->board "8/8/8/8/3kpP1R/8/6K1/8 b - f3 0 1") ]
+         [ s   (board-game-state b) ])
+
+    (check-false (state-w-kingside-ok? s))
+    (check-false (state-w-queenside-ok? s))
+    (check-false (state-b-kingside-ok? s))
+    (check-false (state-b-queenside-ok? s))
+
     (reset-counts! obj)
     (perft! b 1 obj)
     (check-equal? (counts-nodes obj) 7))
@@ -516,7 +537,7 @@
                 (let ([ b (fen->board fen) ])
                   (reset-counts! obj)
                   (perft! b depth obj)
-                  (check-equal? (counts-nodes obj) nodes))))
+                  (check-equal? (counts-nodes obj) nodes (format "Depth: ~a, FEN: ~a" depth fen)))))
               (loop (cdr lst)))))))
 
   )

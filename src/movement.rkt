@@ -4,7 +4,8 @@
          "./board.rkt"
          "./move-ordering.rkt"
          "./move.rkt"
-         "./piece.rkt")
+         "./piece.rkt"
+         "./state.rkt")
 (require debug/repl)
 (require racket/performance-hint)
 
@@ -37,7 +38,7 @@
           [ #b011 (generate-bishop-moves! b idx piece #:quiet-moves? quiet-moves?) ]
           [ #b100 (generate-rook-moves!   b idx piece #:quiet-moves? quiet-moves?) ]
           [ #b101 (generate-queen-moves!  b idx piece #:quiet-moves? quiet-moves?) ]
-          [ #b110 (generate-king-moves!   b idx piece #:quiet-moves? quiet-moves?) ])))))
+          [ #b110 (generate-king-moves!   b idx piece is-white? #:quiet-moves? quiet-moves?) ])))))
 
 (define (generate-bishop-moves! b idx piece #:quiet-moves? [ quiet-moves? #t ])
   (generate-sliding-moves! b idx piece north-east quiet-moves?)
@@ -45,10 +46,10 @@
   (generate-sliding-moves! b idx piece south-west quiet-moves?)
   (generate-sliding-moves! b idx piece north-west quiet-moves?))
 
-(define (generate-king-moves! b idx piece #:quiet-moves? [ quiet-moves? #t ])
+(define (generate-king-moves! b idx piece is-white? #:quiet-moves? [ quiet-moves? #t ])
   (generate-offset-moves! b idx piece king-offsets quiet-moves?)
-  (when quiet-moves?
-    (generate-castle-moves! b idx piece)))
+  (when (and quiet-moves? (may-castle? b is-white?))
+    (generate-castle-moves! b idx piece is-white?)))
 
 (define (generate-knight-moves! b idx piece #:quiet-moves? [ quiet-moves? #t ])
   (generate-offset-moves! b idx piece knight-offsets quiet-moves?))
@@ -108,26 +109,22 @@
     (set-tactical-head! b head)
     (vector-set! (tactical-moves b) head m)))
 
-(define (generate-castle-moves! b idx piece)
-  (when (not (has-moved? piece)) ; King has not moved
-    (let ([ squares (board-squares b) ])
-      (let ([ kr (bytes-ref squares (+ idx 3)) ]
-            [ qr (bytes-ref squares (- idx 4)) ])
-        ;; King side
-        (when (and (is-rook? kr)
-                   (not (has-moved? kr))
-                   (= empty-square (bytes-ref squares (+ idx 1)))
-                   (= empty-square (bytes-ref squares (+ idx 2))))
-          (add-quiet-move! b
-                           (create-move piece idx (+ idx 2) #:is-castle-kingside? #t)))
-        ;; Queen side
-        (when (and (is-rook? qr)
-                   (not (has-moved? qr))
-                   (= empty-square (bytes-ref squares (- idx 1)))
-                   (= empty-square (bytes-ref squares (- idx 2)))
-                   (= empty-square (bytes-ref squares (- idx 3))))
-          (add-quiet-move! b
-                           (create-move piece idx (- idx 2) #:is-castle-queenside? #t)))))))
+(define (generate-castle-moves! b idx piece is-white?)
+  (let ([ s       (board-game-state b) ]
+        [ squares (board-squares b)    ])
+    ;; King side
+    (when (and (if is-white? (state-w-kingside-ok? s) (state-b-kingside-ok? s))
+               (= empty-square (bytes-ref squares (+ idx 1)))
+               (= empty-square (bytes-ref squares (+ idx 2))))
+      (add-quiet-move! b
+                       (create-move piece idx (+ idx 2) #:is-castle-kingside? #t)))
+    ;; Queen side
+    (when (and (if is-white? (state-w-queenside-ok? s) (state-b-queenside-ok? s))
+               (= empty-square (bytes-ref squares (- idx 1)))
+               (= empty-square (bytes-ref squares (- idx 2)))
+               (= empty-square (bytes-ref squares (- idx 3))))
+      (add-quiet-move! b
+                       (create-move piece idx (- idx 2) #:is-castle-queenside? #t)))))
 
 (define (generate-offset-moves! b idx piece offsets quiet-moves?)
   (let ([ squares (board-squares b) ])
