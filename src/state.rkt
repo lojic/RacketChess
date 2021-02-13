@@ -5,7 +5,8 @@
 (require racket/fixnum
          racket/performance-hint)
 
-(provide initial-game-state
+(provide castling-zobrist
+         initial-game-state
          set-state-b-kingside-ok?
          set-state-b-queenside-ok?
          set-state-w-kingside-ok?
@@ -37,6 +38,9 @@
                       [ b-queenside-ok  1 #:flag ]
                       [ b-kingside-ok   1 #:flag ]))
 
+(define castling-bits #b11110000000000000000000000)
+(define castling-shift 22)
+
 (define (create-state)
   (make-state 0 0 0 0 0 0 0 0))
 
@@ -51,3 +55,42 @@
     (set! s (set-state-b-queenside-ok?   s))
     (set! s (set-state-b-kingside-ok?    s))
     s))
+
+(define-inline (castling-zobrist s)
+  (fxrshift (fxand s castling-bits) castling-shift))
+
+(module+ test
+  (require rackunit)
+
+  ;; ------------------------------------------------------------------------------------------
+  ;; castling-zobrist
+  ;; ------------------------------------------------------------------------------------------
+
+  (let ([ s (create-state) ])
+    (check-equal? (castling-zobrist s) #b0000)
+
+    (set! s (set-state-w-queenside-ok? s))
+    (check-equal? (castling-zobrist s) #b0001)
+
+    (set! s (set-state-w-kingside-ok? s))
+    (check-equal? (castling-zobrist s) #b0011)
+
+    (set! s (set-state-b-queenside-ok? s))
+    (check-equal? (castling-zobrist s) #b0111)
+
+    (set! s (set-state-b-kingside-ok? s))
+    (check-equal? (castling-zobrist s) #b1111)
+
+    (set! s (unset-state-b-kingside-ok? s))
+    (check-equal? (castling-zobrist s) #b0111)
+
+    (set! s (unset-state-b-queenside-ok? s))
+    (check-equal? (castling-zobrist s) #b0011)
+
+    (set! s (unset-state-w-kingside-ok? s))
+    (check-equal? (castling-zobrist s) #b0001)
+
+    (set! s (unset-state-w-queenside-ok? s))
+    (check-equal? (castling-zobrist s) #b0000)
+
+    ))

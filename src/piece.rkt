@@ -2,15 +2,16 @@
 
 (require "./board.rkt"
          "./piece-square-tables.rkt")
-(require racket/performance-hint)
+(require racket/fixnum
+         racket/performance-hint)
 
 (provide black-bishop black-king black-knight black-pawn black-queen
          black-rook empty-square is-bishop? is-black? is-black-king? is-king?
-         is-knight? is-other-color?  is-other-piece? is-own-piece? is-pawn?
-         is-piece? is-queen? is-right-color-piece? is-rook?  is-white?
-         is-white-king? piece-symbol piece-type piece-value symbol-piece
-         white-bishop white-king white-knight white-pawn white-queen
-         white-rook)
+         is-knight? is-other-color? is-other-piece? is-own-piece? is-pawn?
+         is-piece? is-queen? is-right-color-piece? is-rook? is-white?
+         is-white-king? piece-symbol piece-type piece-value piece-zobrist
+         symbol-piece white-bishop white-king white-knight white-pawn
+         white-queen white-rook)
 
 ;; Chess Piece
 ;;
@@ -188,6 +189,28 @@
                        (vector-ref king-end-pst-black idx)
                        (vector-ref king-middle-pst-black idx)) ])))))
 
+;; Convert piece to a number suitable for use in Zobrist hashing.
+;; 0001 Black Pawn
+;; 0010 Black Knight
+;; 0011 Black Bishop
+;; 0100 Black Rook
+;; 0101 Black Queen
+;; 0110 Black King
+;; 1001 White Pawn
+;; 1010 White Knight
+;; 1011 White Bishop
+;; 1100 White Rook
+;; 1101 White Queen
+;; 1110 White King
+;; Maximum value is 13 since we'll sub1 the result to get a zero based index
+(define-inline (piece-zobrist piece)
+  (fx- (fxior (fxrshift (fxand piece
+                               white-bit)
+                        4)
+              (fxand piece
+                     piece-type-bits))
+       1))
+
 (define (symbol-piece sym)
   (hash-ref symbol-pieces sym))
 
@@ -333,6 +356,23 @@
     (check-equal? (piece-value b white-rook   (pos->idx "h1")) 500)
     (check-equal? (piece-value b white-queen  (pos->idx "d1")) 895)
     (check-equal? (piece-value b white-king   (pos->idx "e1"))   0))
+
+  ;; ------------------------------------------------------------------------------------------
+  ;; piece-zobrist
+  ;; ------------------------------------------------------------------------------------------
+
+  (check-equal? (piece-zobrist black-pawn)   (sub1 #b0001))
+  (check-equal? (piece-zobrist black-knight) (sub1 #b0010))
+  (check-equal? (piece-zobrist black-bishop) (sub1 #b0011))
+  (check-equal? (piece-zobrist black-rook)   (sub1 #b0100))
+  (check-equal? (piece-zobrist black-queen)  (sub1 #b0101))
+  (check-equal? (piece-zobrist black-king)   (sub1 #b0110))
+  (check-equal? (piece-zobrist white-pawn)   (sub1 #b1001))
+  (check-equal? (piece-zobrist white-knight) (sub1 #b1010))
+  (check-equal? (piece-zobrist white-bishop) (sub1 #b1011))
+  (check-equal? (piece-zobrist white-rook)   (sub1 #b1100))
+  (check-equal? (piece-zobrist white-queen)  (sub1 #b1101))
+  (check-equal? (piece-zobrist white-king)   (sub1 #b1110))
 
   ;; ------------------------------------------------------------------------------------------
   ;; symbol-piece
