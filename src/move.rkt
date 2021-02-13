@@ -1,10 +1,20 @@
 #lang racket
 
-(provide (struct-out move)
-         create-move
+(require "./fixnum-fields.rkt")
+(require racket/fixnum)
+
+(provide create-move
          east
          king-offsets
          knight-offsets
+         move-captured-piece
+         move-dst-idx
+         move-is-castle-kingside?
+         move-is-castle-queenside?
+         move-is-ep-capture?
+         move-promoted-piece
+         move-src
+         move-src-idx
          north
          north-east
          north-west
@@ -13,16 +23,14 @@
          south-west
          west)
 
-(struct move (src
-              src-idx
-              dst-idx
-              captured-piece
-              promoted-piece
-              is-castle-queenside?
-              is-castle-kingside?
-              is-ep-capture?)
-        #:transparent
-        #:mutable)
+(fixnum-fields move ([ src                 5        ]
+                     [ src-idx             7        ]
+                     [ dst-idx             7        ]
+                     [ captured-piece      5        ]
+                     [ promoted-piece      5        ]
+                     [ is-castle-queenside 1 #:flag ]
+                     [ is-castle-kingside  1 #:flag ]
+                     [ is-ep-capture       1 #:flag ]))
 
 ;; Directions
 (define north      -10)
@@ -54,11 +62,11 @@
                      #:is-castle-queenside? [ is-castle-queenside? #f ]
                      #:is-castle-kingside?  [ is-castle-kingside?  #f ]
                      #:is-ep-capture?       [ is-ep-capture?       #f ])
-  (move src
-        src-idx
-        dst-idx
-        captured-piece
-        promoted-piece
-        is-castle-queenside?
-        is-castle-kingside?
-        is-ep-capture?))
+  (make-move src
+             src-idx
+             dst-idx
+             (or captured-piece 0)
+             (or promoted-piece 0)
+             (if is-castle-queenside? 1 0)
+             (if is-castle-kingside?  1 0)
+             (if is-ep-capture?       1 0)))

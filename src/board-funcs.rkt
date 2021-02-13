@@ -4,7 +4,7 @@
          "./piece.rkt"
          "./move.rkt"
          "./state.rkt")
-(require debug/repl)
+(require racket/fixnum)
 
 (provide make-move!
          print-board
@@ -151,7 +151,7 @@
 
      ;; Handle promotion - return the promoted piece instead of the
      ;; pawn.
-     [ (move-promoted-piece m)
+     [ (fx> (move-promoted-piece m) 0)
        (move-promoted-piece m) ]
 
      ;; None of the above, just return the piece
@@ -177,7 +177,7 @@
     ;; src piece will be a pawn.
     (bytes-set! squares src-idx piece)
 
-    (if captured-piece
+    (if (fx> captured-piece 0)
         ;; Unmake capture move
         (cond [ (move-is-ep-capture? m)
                 ;; Unmake en passant capture

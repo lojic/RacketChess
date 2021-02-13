@@ -4,7 +4,8 @@
          "./move.rkt"
          "./piece.rkt")
 
-(require racket/performance-hint)
+(require racket/fixnum
+         racket/performance-hint)
 
 (provide order-moves!)
 
@@ -12,7 +13,7 @@
 (define (order-moves! b)
   (define-inline (mvv-lva m)
     (let ([ victim (move-captured-piece m) ])
-      (if victim
+      (if (fx> victim 0)
           (- (abs (piece-value b victim (move-dst-idx m)))
              (abs (piece-value b (move-src m) (move-src-idx m))))
           0)))

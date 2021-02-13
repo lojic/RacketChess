@@ -7,7 +7,8 @@
          "./piece.rkt"
          "./state.rkt")
 (require debug/repl)
-(require racket/performance-hint)
+(require racket/fixnum
+         racket/performance-hint)
 
 (provide generate-bishop-moves!
          generate-king-moves!
@@ -68,12 +69,12 @@
   (printf "~a~a~a~a"
           (piece-symbol (move-src m))
           (idx->pos (move-src-idx m))
-          (if (move-captured-piece m)
+          (if (fx> (move-captured-piece m) 0)
               "x"
               "-")
           (idx->pos (move-dst-idx m)))
   (let ([ promoted (move-promoted-piece m) ])
-    (when promoted
+    (when (fx> promoted 0)
       (printf "=~a" (piece-symbol promoted))))
   (printf "\n"))
 

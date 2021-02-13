@@ -114,14 +114,14 @@
 (module+ test
   (require rackunit)
 
-  (fixnum-fields move ([src                 8]
-                       [src-idx             7]
-                       [dst-idx             7]
-                       [captured-piece      8]
-                       [promoted-piece      8]
-                       [is-castle-queenside 1 #:flag ]
-                       [is-castle-kingside  1 #:flag ]
-                       [is-ep-capture       1 #:flag ]))
+  (fixnum-fields move ([ src                 5 ]
+                       [ src-idx             7 ]
+                       [ dst-idx             7 ]
+                       [ captured-piece      5 ]
+                       [ promoted-piece      5 ]
+                       [ is-castle-queenside 1 #:flag ]
+                       [ is-castle-kingside  1 #:flag ]
+                       [ is-ep-capture       1 #:flag ]))
 
   ;; ------------------------------------------------------------------------------------------
   ;; Ensure we don't store more bits than the field width
@@ -153,11 +153,11 @@
     (check-not-false (boolean? is-castle-kingside?))
     (check-not-false (boolean? is-ep-capture?))
 
-    (check-equal? (move-src m) #b11111111)
+    (check-equal? (move-src m) #b11111)
     (check-equal? (move-src-idx m) #b1111111)
     (check-equal? (move-dst-idx m) #b1111111)
-    (check-equal? (move-captured-piece m) #b11111111)
-    (check-equal? (move-promoted-piece m) #b11111111)
+    (check-equal? (move-captured-piece m) #b11111)
+    (check-equal? (move-promoted-piece m) #b11111)
 
     (check-not-false (move-is-castle-queenside? m))
     (check-not-false (move-is-castle-kingside? m))

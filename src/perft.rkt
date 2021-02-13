@@ -16,7 +16,8 @@
          "./pgn.rkt"
          "./state.rkt")
 
-(require racket/performance-hint)
+(require racket/fixnum
+         racket/performance-hint)
 
 (define LONG-TEST #f)  ;; 1/31/2021 took 1 min 40 sec
 (define REALLY-LONG-TEST #f)
@@ -49,7 +50,7 @@
   ;; Total nodes
   (set-counts-nodes! obj (add1 (counts-nodes obj)))
 
-  (when (move-captured-piece m)
+  (when (fx> (move-captured-piece m) 0)
     ;; Captures
     (set-counts-captures! obj (add1 (counts-captures obj)))
     (when (move-is-ep-capture? m)
@@ -61,7 +62,7 @@
     ;; Castles
     (set-counts-castles! obj (add1 (counts-castles obj))))
 
-  (when (move-promoted-piece m)
+  (when (fx> (move-promoted-piece m) 0)
     ;; Promotions
     (set-counts-promotions! obj (add1 (counts-promotions obj)))))
 
