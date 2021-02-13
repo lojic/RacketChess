@@ -24,18 +24,18 @@
 ;;   101 Queen
 ;;   110 King
 ;;   111 Not used
-;; Bit 3 Not used
-;; Bit 4 Not used
+;; Bit 3 Black
+;; Bit 4 White
 ;; Bit 5 Not used
-;; Bit 6 Black
-;; Bit 7 White
+;; Bit 6 Not used
+;; Bit 7 Not used
 
-(define black-bit             #b01000000)
-(define color-bits            #b11000000)
+(define black-bit             #b00001000)
+(define color-bits            #b00011000)
 (define guard-square          #b11111111) ; Note: both black and white bits are set purposely :)
 (define piece-type-bits       #b00000111)
 (define piece-type-color-bits #b11000111)
-(define white-bit             #b10000000)
+(define white-bit             #b00010000)
 
 ;; Piece types
 (define pawn-bits   #b001)
@@ -45,20 +45,19 @@
 (define queen-bits  #b101)
 (define king-bits   #b110)
 
-;;                     WB__M___
-(define white-pawn   #b10000001) ; 0x81
-(define white-knight #b10000010) ; 0x82
-(define white-bishop #b10000011) ; 0x83
-(define white-rook   #b10000100) ; 0x84
-(define white-queen  #b10000101) ; 0x85
-(define white-king   #b10000110) ; 0x86
+(define white-pawn   #b00010001)
+(define white-knight #b00010010)
+(define white-bishop #b00010011)
+(define white-rook   #b00010100)
+(define white-queen  #b00010101)
+(define white-king   #b00010110)
 
-(define black-pawn   #b01000001) ; 0x41
-(define black-knight #b01000010) ; 0x42
-(define black-bishop #b01000011) ; 0x43
-(define black-rook   #b01000100) ; 0x44
-(define black-queen  #b01000101) ; 0x45
-(define black-king   #b01000110) ; 0x46
+(define black-pawn   #b00001001)
+(define black-knight #b00001010)
+(define black-bishop #b00001011)
+(define black-rook   #b00001100)
+(define black-queen  #b00001101)
+(define black-king   #b00001110)
 
 (define empty-square #b00000000)
 
