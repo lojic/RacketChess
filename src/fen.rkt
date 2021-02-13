@@ -3,8 +3,8 @@
 ;; See https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation
 
 (require "./board.rkt"
-         "./board-funcs.rkt"
          "./board-slow.rkt"
+         "./make-move.rkt"
          "./piece.rkt"
          "./state.rkt")
 

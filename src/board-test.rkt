@@ -2,8 +2,8 @@
 
 (module+ test
   (require "./board.rkt"
-           "./board-funcs.rkt"
            "./evaluation.rkt"
+           "./make-move.rkt"
            "./piece.rkt"
            "./fen.rkt")
 

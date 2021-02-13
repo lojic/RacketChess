@@ -1,9 +1,9 @@
 #lang racket
 
-(require "./board-funcs.rkt"
-         "./board.rkt"
+(require "./board.rkt"
          "./evaluation.rkt"
          "./legality.rkt"
+         "./make-move.rkt"
          "./movement.rkt")
 
 (require racket/performance-hint)

@@ -1,7 +1,7 @@
 #lang racket
 
-(require "./board-funcs.rkt"
-         "./board.rkt"
+(require "./board.rkt"
+         "./make-move.rkt"
          "./move-ordering.rkt"
          "./move.rkt"
          "./piece.rkt"

@@ -1,10 +1,10 @@
 #lang racket
 
 (module+ test
-  (require "./board.rkt")
-  (require "./board-funcs.rkt")
-  (require "./fen.rkt")
-  (require "./pgn.rkt")
+  (require "./board.rkt"
+           "./fen.rkt"
+           "./make-move.rkt"
+           "./pgn.rkt")
 
   (require rackunit)
 

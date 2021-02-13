@@ -6,10 +6,10 @@
 ;; 3) go perft 3
 
 (require "./board.rkt"
-         "./board-funcs.rkt"
          "./evaluation.rkt"
          "./fen.rkt"
          "./legality.rkt"
+         "./make-move.rkt"
          "./move.rkt"
          "./movement.rkt"
          "./move-ordering.rkt"

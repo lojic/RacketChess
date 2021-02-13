@@ -1,12 +1,13 @@
 #lang racket
 
-(require "./board.rkt")
-(require "./board-funcs.rkt")
-(require "./legality.rkt")
-(require "./movement.rkt")
-(require "./pgn.rkt")
-(require "./fen.rkt")
-(require "./search.rkt")
+(require "./board.rkt"
+         "./board-utilities.rkt"
+         "./fen.rkt"
+         "./legality.rkt"
+         "./make-move.rkt"
+         "./movement.rkt"
+         "./pgn.rkt"
+         "./search.rkt")
 
 (define (game depth computer-plays-black? seconds [ fen #f ])
   (define (normalize-score score)

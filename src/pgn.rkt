@@ -1,12 +1,12 @@
 #lang racket
 
-(require "./board.rkt")
-(require "./board-funcs.rkt")
-(require "./board-slow.rkt")
-(require "./fen.rkt")
-(require "./piece.rkt")
-(require "./move.rkt")
-(require "./movement.rkt")
+(require "./board-slow.rkt"
+         "./board.rkt"
+         "./fen.rkt"
+         "./make-move.rkt"
+         "./move.rkt"
+         "./movement.rkt"
+         "./piece.rkt")
 (require threading)
 
 (provide make-pgn-move!
