@@ -92,7 +92,10 @@
 
 (define (perft! b max-level counts #:evaluate? [ evaluate? #f ] [ m #f ])
   (if (= (board-depth b) max-level)
-      (update-counts! counts m)
+      (begin
+        (update-counts! counts m)
+        (when evaluate?
+          (evaluate b)))
       (begin
         (generate-moves! b)
         (let ([ tmoves (tactical-moves b) ]
@@ -103,8 +106,6 @@
             (cond [ (<= ti thead)
                     (let ([ m (vector-ref tmoves ti)])
                       (make-move! b m)
-                      (when evaluate?
-                        (evaluate b))
                       (if (is-legal? b m)
                           (begin
                             (perft! b max-level counts
@@ -116,8 +117,6 @@
                   [ (<= qi qhead)
                     (let ([ m (vector-ref qmoves qi) ])
                       (make-move! b m)
-                      (when evaluate?
-                        (evaluate b))
                       (if (is-legal? b m)
                           (begin
                             (perft! b max-level counts
