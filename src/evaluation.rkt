@@ -3,7 +3,12 @@
 (require "./board.rkt"
          "./piece.rkt")
 
-(require racket/performance-hint)
+(require racket/require
+         (filtered-in
+          (λ (name)
+            (and (regexp-match #rx"^unsafe-fx" name)
+                 (regexp-replace #rx"unsafe-" name "")))
+          racket/unsafe/ops))
 
 (provide evaluate)
 
@@ -14,12 +19,12 @@
                      [ file (in-range 8) ])
             (let* ([ idx    (file-rank->idx file rank)        ]
                    [ piece  (bytes-ref (board-squares b) idx) ])
-              (if (= piece empty-square)
+              (if (fx= piece empty-square)
                   0
                   (piece-value b piece idx)))) ])
     (if (is-whites-move? b)
         score
-        (- score))))
+        (fx- score))))
 
 (module+ main
   (require "./fen.rkt")

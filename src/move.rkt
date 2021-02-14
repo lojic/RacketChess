@@ -1,7 +1,7 @@
 #lang racket
 
 (require "./fixnum-fields.rkt")
-(require racket/fixnum)
+(require racket/performance-hint)
 
 (provide create-move
          east
@@ -54,14 +54,14 @@
         (+ west west north)
         (+ north north west)))
 
-(define (create-move src
-                     src-idx
-                     dst-idx
-                     #:captured-piece       [ captured-piece       #f ]
-                     #:promoted-piece       [ promoted-piece       #f ]
-                     #:is-castle-queenside? [ is-castle-queenside? #f ]
-                     #:is-castle-kingside?  [ is-castle-kingside?  #f ]
-                     #:is-ep-capture?       [ is-ep-capture?       #f ])
+(define-inline (create-move src
+                            src-idx
+                            dst-idx
+                            #:captured-piece       [ captured-piece       #f ]
+                            #:promoted-piece       [ promoted-piece       #f ]
+                            #:is-castle-queenside? [ is-castle-queenside? #f ]
+                            #:is-castle-kingside?  [ is-castle-kingside?  #f ]
+                            #:is-ep-capture?       [ is-ep-capture?       #f ])
   (make-move src
              src-idx
              dst-idx

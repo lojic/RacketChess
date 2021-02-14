@@ -2,12 +2,10 @@
 
 (require "./board-slow.rkt"
          "./board.rkt"
-         "./fen.rkt"
          "./make-move.rkt"
          "./move.rkt"
          "./movement.rkt"
          "./piece.rkt")
-(require threading)
 
 (provide make-pgn-move!
          pgn-load-file!

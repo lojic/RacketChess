@@ -2,7 +2,13 @@
 
 (require "./board.rkt"
          "./piece-square-tables.rkt")
-(require racket/fixnum
+(require racket/require
+         ; racket/fixnum
+         (filtered-in
+          (λ (name)
+            (and (regexp-match #rx"^unsafe-fx" name)
+                 (regexp-replace #rx"unsafe-" name "")))
+          racket/unsafe/ops)
          racket/performance-hint)
 
 (provide black-bishop black-king black-knight black-pawn black-queen

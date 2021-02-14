@@ -1,12 +1,10 @@
 #lang racket
 
 (require "./board.rkt"
-         "./make-move.rkt"
          "./move-ordering.rkt"
          "./move.rkt"
          "./piece.rkt"
          "./state.rkt")
-(require debug/repl)
 (require racket/fixnum
          racket/performance-hint)
 

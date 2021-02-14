@@ -4,7 +4,8 @@
 (require "./move.rkt")
 (require "./piece.rkt")
 
-(require racket/performance-hint)
+(require racket/fixnum
+         racket/performance-hint)
 
 (provide is-legal?)
 
@@ -111,8 +112,8 @@
 ;; Guard squares off the board are both black & white, so they will be
 ;; #t for own?
 (define (ray-attacking? squares king-idx own? enemy? dir is-attacker?)
-  (let loop ([ idx (+ king-idx dir) ])
+  (let loop ([ idx (fx+ king-idx dir) ])
     (let ([ src (bytes-ref squares idx) ])
       (cond [ (own? src)           #f                 ]
-            [ (= src empty-square) (loop (+ idx dir)) ]
+            [ (fx= src empty-square) (loop (fx+ idx dir)) ]
             [ else                 (is-attacker? src) ]))))
