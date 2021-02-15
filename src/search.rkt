@@ -4,9 +4,11 @@
          "./evaluation.rkt"
          "./legality.rkt"
          "./make-move.rkt"
-         "./movement.rkt")
+         "./movement.rkt"
+         "./tt.rkt")
 
-(require racket/performance-hint)
+(require racket/fixnum
+         racket/performance-hint)
 
 (provide search)
 
@@ -57,43 +59,58 @@
 
 (define (alpha-beta! b max-level alpha beta is-timeout?)
   (define depth (board-depth b))
+  (define tt-result (read-tt-entry (get-hash-key) (fx- max-level depth) alpha beta))
 
-  (cond [ (is-timeout?) #f ]
-        [ (= depth max-level)
-          (quiesce! b alpha beta is-timeout?) ]
-        [ else
-          (let ([ get-move (move-iterator! b) ])
-            (let loop ([ alpha alpha ]
-                       [ move  #f    ])
-              (let ([ m (get-move) ])
-                (if (or (not m) (>= alpha beta))
-                    ;; No more moves, or alpha >= beta
+  (if (and tt-result (car tt-result))
+      ;; Found a TT entry
+      (if (fx= depth 0)
+          (cons (car tt-result) (cdr tt-result))
+          (car tt-result))
+      ;; No TT entry found
+      (cond [ (is-timeout?) #f ]
+            [ (= depth max-level)
+              (quiesce! b alpha beta is-timeout?) ]
+            [ else
+              (let ([ get-move (move-iterator! b) ])
+                (let loop ([ alpha alpha      ]
+                           [ move  #f         ]
+                           [ type  NODE-ALPHA ])
+                  (let ([ m (get-move) ])
+                    (if (or (not m) (>= alpha beta))
+                        ;; No more moves, or alpha >= beta
 
-                    ;; If we're at the top level, return move & score;
-                    ;; otherwise, just score. If no move was found, mate
-                    ;; is implied. Adjust the score by depth to favor
-                    ;; shorter mates to prevent the program from just
-                    ;; gobbling up pieces instead of going for the mate!
-                    (if (= depth 0)
-                        (cons alpha move)
-                        (if move
-                            alpha
-                            (+ MIN-SCORE depth)))
-                    (begin
-                      (make-move! b m)
-                      (if (is-legal? b m)
-                          ;; Legal move, continue
-                          (let* ([ result (alpha-beta! b max-level (- beta) (- alpha) is-timeout?) ]
-                                 [ score  (and result (- result)) ])
-                            (unmake-move! b m)
-                            (cond [ (not score)     #f                ]
-                                  [ (>= score beta) beta              ]
-                                  [ (> score alpha) (loop score m)    ]
-                                  [ else            (loop alpha move) ]))
-                          ;; Illegal move, ignore move
-                          (begin
-                            (unmake-move! b m)
-                            (loop alpha move)))))))) ]))
+                        ;; If we're at the top level, return move & score;
+                        ;; otherwise, just score. If no move was found, mate
+                        ;; is implied. Adjust the score by depth to favor
+                        ;; shorter mates to prevent the program from just
+                        ;; gobbling up pieces instead of going for the mate!
+                        (if (= depth 0)
+                            (cons alpha move)
+                            (if move
+                                (begin
+                                  (write-tt-entry! (get-hash-key) (fx- max-level depth) alpha move type)
+                                  alpha)
+                                (+ MIN-SCORE depth)))
+                        (begin
+                          (make-move! b m)
+                          (if (is-legal? b m)
+                              ;; Legal move, continue
+                              (let* ([ result (alpha-beta! b max-level (- beta) (- alpha) is-timeout?) ]
+                                     [ score  (and result (- result)) ])
+                                (unmake-move! b m)
+                                (cond [ (not score)
+                                        #f ]
+                                      [ (>= score beta)
+                                        (write-tt-entry! (get-hash-key) (fx- max-level depth) beta move NODE-BETA)
+                                        beta ]
+                                      [ (> score alpha)
+                                        (loop score m NODE-EXACT) ]
+                                      [ else
+                                        (loop alpha move type) ]))
+                              ;; Illegal move, ignore move
+                              (begin
+                                (unmake-move! b m)
+                                (loop alpha move type)))))))) ])))
 
 (define (quiesce! b alpha beta is-timeout?)
   (define stand-pat (evaluate b))

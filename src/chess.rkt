@@ -7,7 +7,8 @@
          "./make-move.rkt"
          "./movement.rkt"
          "./pgn.rkt"
-         "./search.rkt")
+         "./search.rkt"
+         "./zobrist.rkt")
 
 (define (game depth computer-plays-black? seconds [ fen #f ])
   (define (normalize-score score)
@@ -18,6 +19,9 @@
   (define b (if fen
                 (fen->board fen)
                 (fen->board)))
+
+  ;; Initialize Zobrist key
+  (set-hash-key! (generate-zobrist-key b))
 
   (when (and computer-plays-black?
              (is-whites-move? b))
