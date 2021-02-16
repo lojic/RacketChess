@@ -7,13 +7,13 @@
 
 (require "./board.rkt"
          "./evaluation.rkt"
+         "./global.rkt"
          "./legality.rkt"
          "./make-move.rkt"
          "./move.rkt"
          "./movement.rkt")
 
-(require racket/fixnum
-         racket/performance-hint)
+(require racket/performance-hint)
 
 (define LONG-TEST #f)  ;; 1/31/2021 took 1 min 40 sec
 (define REALLY-LONG-TEST #f)
@@ -44,23 +44,23 @@
 
 (define-inline (update-counts! obj m)
   ;; Total nodes
-  (set-counts-nodes! obj (add1 (counts-nodes obj)))
+  (set-counts-nodes! obj (fx+ 1 (counts-nodes obj)))
 
   (when (fx> (move-captured-piece m) 0)
     ;; Captures
-    (set-counts-captures! obj (add1 (counts-captures obj)))
+    (set-counts-captures! obj (fx+ 1 (counts-captures obj)))
     (when (move-is-ep-capture? m)
       ;; EP Captures
-      (set-counts-ep-captures! obj (add1 (counts-ep-captures obj)))))
+      (set-counts-ep-captures! obj (fx+ 1 (counts-ep-captures obj)))))
 
   (when (or (move-is-castle-queenside? m)
             (move-is-castle-kingside? m))
     ;; Castles
-    (set-counts-castles! obj (add1 (counts-castles obj))))
+    (set-counts-castles! obj (fx+ 1 (counts-castles obj))))
 
   (when (fx> (move-promoted-piece m) 0)
     ;; Promotions
-    (set-counts-promotions! obj (add1 (counts-promotions obj)))))
+    (set-counts-promotions! obj (fx+ 1 (counts-promotions obj)))))
 
 (define (divide b max-level)
   (define obj (create-zero-counts))
@@ -100,7 +100,7 @@
               [ qhead  (quiet-head b)     ])
           (let loop ([ ti 0 ][ qi 0 ])
             (cond [ (<= ti thead)
-                    (let ([ m (vector-ref tmoves ti)])
+                    (let ([ m (vecref tmoves ti)])
                       (make-move! b m)
                       (if (is-legal? b m)
                           (begin
@@ -109,9 +109,9 @@
                                     m)
                             (unmake-move! b m))
                           (unmake-move! b m))
-                      (loop (add1 ti) qi)) ]
+                      (loop (fx+ 1 ti) qi)) ]
                   [ (<= qi qhead)
-                    (let ([ m (vector-ref qmoves qi) ])
+                    (let ([ m (vecref qmoves qi) ])
                       (make-move! b m)
                       (if (is-legal? b m)
                           (begin
@@ -120,7 +120,7 @@
                                     m)
                             (unmake-move! b m))
                           (unmake-move! b m))
-                      (loop ti (add1 qi))) ]))))))
+                      (loop ti (fx+ 1 qi))) ]))))))
 
 (module+ main
   (require "./fen.rkt")

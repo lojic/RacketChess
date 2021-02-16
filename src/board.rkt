@@ -1,8 +1,8 @@
 #lang racket
 
-(require "./state.rkt")
-(require racket/fixnum
-         racket/performance-hint)
+(require "./global.rkt"
+         "./state.rkt")
+(require racket/performance-hint)
 
 (provide black-king-idx
          create-board
@@ -103,14 +103,14 @@
              (initial-game-state pos->idx) ; game-state
              (make-fxvector max-moves)     ; game-stack
              (make-vector max-depth)       ; quiet-moves
-             (make-vector max-depth)       ; quiet-head
+             (make-fxvector max-depth)     ; quiet-head
              (make-vector max-depth)       ; tactical-moves
-             (make-vector max-depth)) ])   ; tactical-head
+             (make-fxvector max-depth)) ]) ; tactical-head
     (for ([ i (in-range max-depth) ])
-      (vector-set! (board-quiet-head b) i -1)
-      (vector-set! (board-quiet-moves b) i (make-vector max-moves))
-      (vector-set! (board-tactical-head b) i -1)
-      (vector-set! (board-tactical-moves b) i (make-vector max-moves)))
+      (fxvector-set! (board-quiet-head b) i -1)
+      (vecset! (board-quiet-moves b) i (make-vector max-moves))
+      (fxvector-set! (board-tactical-head b) i -1)
+      (vecset! (board-tactical-moves b) i (make-vector max-moves)))
 
     b))
 
@@ -118,19 +118,19 @@
   (+ 21 file (* rank 10)))
 
 (define-inline (full-move b)
-  (add1 (arithmetic-shift (board-move-i b) -1)))
+  (fx+ 1 (arithmetic-shift (board-move-i b) -1)))
 
 (define (idx->pos idx)
   (vector-ref positions idx))
 
 (define-inline (init-moves! b)
   (let ([ d (board-depth b) ])
-    (vector-set! (board-quiet-head b) d -1)
-    (vector-set! (board-tactical-head b) d -1)))
+    (fxvector-set! (board-quiet-head b) d -1)
+    (fxvector-set! (board-tactical-head b) d -1)))
 
 (define-inline (is-end-game? b)
   ;; TODO make this better!
-  (> (board-move-i b) 50))
+  (fx> (board-move-i b) 50))
 
 ;; Decrement move-i and pop the game state off the stack
 (define (pop-game-state! b)
@@ -147,14 +147,14 @@
   (let ([ state  (board-game-state b) ]
         [ move-i (board-move-i b)     ])
     (fxvector-set! (board-game-stack b) move-i state)
-    (set-board-move-i! b (add1 move-i))))
+    (set-board-move-i! b (fx+ 1 move-i))))
 
 (define-inline (quiet-head b [ d #f ])
-  (vector-ref (board-quiet-head b)
-              (if d d (board-depth b))))
+  (fxvector-ref (board-quiet-head b)
+                (if d d (board-depth b))))
 
 (define-inline (quiet-moves b [ d #f ])
-  (vector-ref (board-quiet-moves b)
+  (vecref (board-quiet-moves b)
               (if d d (board-depth b))))
 
 (define-inline (reset-depth! b)
@@ -162,25 +162,25 @@
 
 (define-inline (set-full-move! b full-move blacks-move?)
   (if blacks-move?
-      (set-board-move-i! b (add1 (arithmetic-shift (sub1 full-move) 1)))
+      (set-board-move-i! b (fx+ 1 (arithmetic-shift (sub1 full-move) 1)))
       (set-board-move-i! b (arithmetic-shift (sub1 full-move) 1))))
 
 (define-inline (set-quiet-head! b v [ d #f ])
-  (vector-set! (board-quiet-head b)
-               (if d d (board-depth b))
-               v))
+  (fxvector-set! (board-quiet-head b)
+                 (if d d (board-depth b))
+                 v))
 
 (define-inline (set-tactical-head! b v [ d #f ])
-  (vector-set! (board-tactical-head b)
-               (if d d (board-depth b))
-               v))
+  (fxvector-set! (board-tactical-head b)
+                 (if d d (board-depth b))
+                 v))
 
 (define-inline (tactical-head b [ d #f ])
-  (vector-ref (board-tactical-head b)
-              (if d d (board-depth b))))
+  (fxvector-ref (board-tactical-head b)
+                (if d d (board-depth b))))
 
 (define-inline (tactical-moves b [ d #f ])
-  (vector-ref (board-tactical-moves b)
+  (vecref (board-tactical-moves b)
               (if d d (board-depth b))))
 
 ;; --------------------------------------------------------------------------------------------
@@ -205,6 +205,7 @@
         (or (state-w-kingside-ok? s) (state-w-queenside-ok? s))
         (or (state-b-kingside-ok? s) (state-b-queenside-ok? s)))))
 
+;; TODO just mask the bits out
 (define-inline (revoke-castling! b white?)
   (if white?
       (begin
@@ -273,13 +274,13 @@
     (check-equal? (get-ep-idx b) 0)
 
     ;; moves
-    (check-equal? (vector-length (board-quiet-head b)) max-depth)
+    (check-equal? (fxvector-length (board-quiet-head b)) max-depth)
     (check-equal? (vector-length (board-quiet-moves b)) max-depth)
-    (check-equal? (vector-length (board-tactical-head b)) max-depth)
+    (check-equal? (fxvector-length (board-tactical-head b)) max-depth)
     (check-equal? (vector-length (board-tactical-moves b)) max-depth)
     (for ([ i (in-range max-depth) ])
-      (check-equal? (vector-ref (board-quiet-head b) i) -1)
-      (check-equal? (vector-ref (board-tactical-head b) i) -1)
+      (check-equal? (fxvector-ref (board-quiet-head b) i) -1)
+      (check-equal? (fxvector-ref (board-tactical-head b) i) -1)
       (check-equal? (vector-length (vector-ref (board-quiet-moves b) i)) max-moves)
       (check-equal? (vector-length (vector-ref (board-tactical-moves b) i)) max-moves)))
 
@@ -297,13 +298,13 @@
   ;; ------------------------------------------------------------------------------------------
 
   (let ([ b (create-board) ])
-    (vector-set! (board-quiet-head b) 0 7)
-    (vector-set! (board-tactical-head b) 0 8)
-    (check-not-equal? (vector-ref (board-quiet-head b) 0) -1)
-    (check-not-equal? (vector-ref (board-tactical-head b) 0) -1)
+    (fxvector-set! (board-quiet-head b) 0 7)
+    (fxvector-set! (board-tactical-head b) 0 8)
+    (check-not-equal? (fxvector-ref (board-quiet-head b) 0) -1)
+    (check-not-equal? (fxvector-ref (board-tactical-head b) 0) -1)
     (init-moves! b)
-    (check-equal? (vector-ref (board-quiet-head b) 0) -1)
-    (check-equal? (vector-ref (board-tactical-head b) 0) -1))
+    (check-equal? (fxvector-ref (board-quiet-head b) 0) -1)
+    (check-equal? (fxvector-ref (board-tactical-head b) 0) -1))
 
   ;; ------------------------------------------------------------------------------------------
   ;; pos->idx / idx->pos

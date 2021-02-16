@@ -3,7 +3,7 @@
 (require "./board.rkt"
          "./piece-square-tables.rkt")
 (require racket/require
-         ; racket/fixnum
+                                        ; racket/fixnum
          (filtered-in
           (λ (name)
             (and (regexp-match #rx"^unsafe-fx" name)
@@ -87,58 +87,58 @@
     (values (cdr pair) (car pair))))
 
 (define-inline (is-bishop? piece)
-  (= (bitwise-and piece piece-type-bits) bishop-bits))
+  (fx= (fxand piece piece-type-bits) bishop-bits))
 
 (define-inline (is-black? piece)
-  (> (bitwise-and piece black-bit) #b0))
+  (fx> (fxand piece black-bit) #b0))
 
 (define-inline (is-black-king? piece)
   (and (is-black? piece)
        (is-king? piece)))
 
 (define-inline (is-king? piece)
-  (= (bitwise-and piece piece-type-bits) king-bits))
+  (fx= (fxand piece piece-type-bits) king-bits))
 
 (define-inline (is-knight? piece)
-  (= (bitwise-and piece piece-type-bits) knight-bits))
+  (fx= (fxand piece piece-type-bits) knight-bits))
 
 (define-inline (is-major? piece)
-  (> (bitwise-and piece piece-type-bits)
-     1))
+  (fx> (fxand piece piece-type-bits)
+       1))
 
 (define-inline (is-other-color? p1 p2)
-  (= (bitwise-ior (bitwise-and p1 color-bits)
-                  (bitwise-and p2 color-bits))
-     color-bits))
+  (fx= (fxior (fxand p1 color-bits)
+              (fxand p2 color-bits))
+       color-bits))
 
 (define-inline (is-other-piece? mine other)
-  (= (bitwise-and (bitwise-xor mine other)
-                  color-bits)
-     color-bits))
+  (fx= (fxand (fxxor mine other)
+              color-bits)
+       color-bits))
 
 (define-inline (is-own-piece? mine other)
-  (= (bitwise-and (bitwise-xor mine other)
-                  color-bits)
-     #b0))
+  (fx= (fxand (fxxor mine other)
+              color-bits)
+       #b0))
 
 (define-inline (is-pawn? piece)
-  (= (bitwise-and piece piece-type-bits)
-     pawn-bits))
+  (fx= (fxand piece piece-type-bits)
+       pawn-bits))
 
 (define-inline (is-piece? piece)
-  (> (bitwise-and piece piece-type-bits) #b0))
+  (fx> (fxand piece piece-type-bits) #b0))
 
 (define-inline (is-queen? piece)
-  (= (bitwise-and piece piece-type-bits) queen-bits))
+  (fx= (fxand piece piece-type-bits) queen-bits))
 
 (define-inline (is-right-color-piece? piece is-white?)
-  (> (bitwise-and piece (if is-white? white-bit black-bit)) #b0))
+  (fx> (fxand piece (if is-white? white-bit black-bit)) #b0))
 
 (define-inline (is-rook? piece)
-  (= (bitwise-and piece piece-type-bits) rook-bits))
+  (fx= (fxand piece piece-type-bits) rook-bits))
 
 (define-inline (is-white? piece)
-  (> (bitwise-and piece white-bit) #b0))
+  (fx> (fxand piece white-bit) #b0))
 
 (define-inline (is-white-king? piece)
   (and (is-white? piece)
@@ -146,10 +146,10 @@
 
 (define (piece-symbol piece)
   (hash-ref piece-symbols
-            (bitwise-and piece piece-type-color-bits)))
+            (fxand piece piece-type-color-bits)))
 
 (define-inline (piece-type piece)
-  (bitwise-and piece piece-type-bits))
+  (fxand piece piece-type-bits))
 
 ;; https://www.chessprogramming.org/Simplified_Evaluation_Function
 ;; 1. Avoid exchanging one minor piece for three pawns.
@@ -161,36 +161,36 @@
 ;;    B + N = R + 1.5P
 ;;    Q + P = 2R
 (define (piece-value b piece idx)
-  (let ([ type (bitwise-and piece piece-type-bits) ])
+  (let ([ type (fxand piece piece-type-bits) ])
     (if (is-white? piece)
-        (cond [ (= type #b001)
-                (+ 100 (vector-ref pawn-pst-white idx)) ]
-              [ (= type #b010)
-                (+ 320 (vector-ref knight-pst-white idx)) ]
-              [ (= type #b011)
-                (+ 330 (vector-ref bishop-pst-white idx)) ]
-              [ (= type #b100)
-                (+ 500 (vector-ref rook-pst-white idx)) ]
-              [ (= type #b101)
-                (+ 900 (vector-ref queen-pst-white idx)) ]
+        (cond [ (fx= type #b001)
+                (fx+ 100 (fxvector-ref pawn-pst-white idx)) ]
+              [ (fx= type #b010)
+                (fx+ 320 (fxvector-ref knight-pst-white idx)) ]
+              [ (fx= type #b011)
+                (fx+ 330 (fxvector-ref bishop-pst-white idx)) ]
+              [ (fx= type #b100)
+                (fx+ 500 (fxvector-ref rook-pst-white idx)) ]
+              [ (fx= type #b101)
+                (fx+ 900 (fxvector-ref queen-pst-white idx)) ]
               [ else
                 (if (is-end-game? b)
-                    (vector-ref king-end-pst-white idx)
-                    (vector-ref king-middle-pst-white idx)) ])
-        (- (cond [ (= type #b001)
-                   (+ 100 (vector-ref pawn-pst-black idx)) ]
-                 [ (= type #b010)
-                   (+ 320 (vector-ref knight-pst-black idx)) ]
-                 [ (= type #b011)
-                   (+ 330 (vector-ref bishop-pst-black idx)) ]
-                 [ (= type #b100)
-                   (+ 500 (vector-ref rook-pst-black idx)) ]
-                 [ (= type #b101)
-                   (+ 900 (vector-ref queen-pst-black idx)) ]
+                    (fxvector-ref king-end-pst-white idx)
+                    (fxvector-ref king-middle-pst-white idx)) ])
+        (- (cond [ (fx= type #b001)
+                   (fx+ 100 (fxvector-ref pawn-pst-black idx)) ]
+                 [ (fx= type #b010)
+                   (fx+ 320 (fxvector-ref knight-pst-black idx)) ]
+                 [ (fx= type #b011)
+                   (fx+ 330 (fxvector-ref bishop-pst-black idx)) ]
+                 [ (fx= type #b100)
+                   (fx+ 500 (fxvector-ref rook-pst-black idx)) ]
+                 [ (fx= type #b101)
+                   (fx+ 900 (fxvector-ref queen-pst-black idx)) ]
                  [ else
                    (if (is-end-game? b)
-                       (vector-ref king-end-pst-black idx)
-                       (vector-ref king-middle-pst-black idx)) ])))))
+                       (fxvector-ref king-end-pst-black idx)
+                       (fxvector-ref king-middle-pst-black idx)) ])))))
 
 ;; We can simply use the lower order 4 bits in the piece for a Zobrist index
 ;; 1001 Black Pawn

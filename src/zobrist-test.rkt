@@ -4,13 +4,13 @@
   (require rackunit)
   (require "./board.rkt"
            "./fen.rkt"
+           "./global.rkt"
            "./make-move.rkt"
            "./piece.rkt"
            "./state.rkt"
            "./zobrist.rkt")
 
   (require math/base
-           racket/fixnum
            racket/performance-hint)
 
   ;; Sanity check - value will change if random seed or generate-zobrist-key changes
@@ -34,23 +34,23 @@
 
     (set-hash-key! key1)
 
-    (check-equal? (bytes-ref (board-squares b1) e2) white-pawn)
-    (check-equal? (bytes-ref (board-squares b1) e3) empty-square)
-    (check-equal? (bytes-ref (board-squares b1) e4) empty-square)
-    (check-equal? (bytes-ref (board-squares b1) b8) black-knight)
+    (check-equal? (get-square (board-squares b1) e2) white-pawn)
+    (check-equal? (get-square (board-squares b1) e3) empty-square)
+    (check-equal? (get-square (board-squares b1) e4) empty-square)
+    (check-equal? (get-square (board-squares b1) b8) black-knight)
     (check-equal? (get-ep-idx b1) empty-square)
 
-    (check-equal? (bytes-ref (board-squares b2) e2) empty-square)
-    (check-equal? (bytes-ref (board-squares b2) e3) empty-square)
-    (check-equal? (bytes-ref (board-squares b2) e4) white-pawn)
-    (check-equal? (bytes-ref (board-squares b2) b8) black-knight)
+    (check-equal? (get-square (board-squares b2) e2) empty-square)
+    (check-equal? (get-square (board-squares b2) e3) empty-square)
+    (check-equal? (get-square (board-squares b2) e4) white-pawn)
+    (check-equal? (get-square (board-squares b2) b8) black-knight)
     (check-equal? (get-ep-idx b2) e3)
 
-    (check-equal? (bytes-ref (board-squares b3) e2) empty-square)
-    (check-equal? (bytes-ref (board-squares b3) e3) empty-square)
-    (check-equal? (bytes-ref (board-squares b3) e4) white-pawn)
-    (check-equal? (bytes-ref (board-squares b3) b8) empty-square)
-    (check-equal? (bytes-ref (board-squares b3) c6) black-knight)
+    (check-equal? (get-square (board-squares b3) e2) empty-square)
+    (check-equal? (get-square (board-squares b3) e3) empty-square)
+    (check-equal? (get-square (board-squares b3) e4) white-pawn)
+    (check-equal? (get-square (board-squares b3) b8) empty-square)
+    (check-equal? (get-square (board-squares b3) c6) black-knight)
     (check-equal? (get-ep-idx b3) 0)
 
     (set-hash-key! (xor-piece (get-hash-key) white-pawn e2)) ;; Remove pawn from e2

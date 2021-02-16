@@ -1,6 +1,7 @@
 #lang racket
 
-(require "./board.rkt")
+(require "./board.rkt"
+         "./global.rkt")
 
 (provide bishop-pst-black
          bishop-pst-white
@@ -91,19 +92,19 @@
     -50 -30 -30 -30 -30 -30 -30 -50))
 
 (define (init-pst raw)
-  (let ([ vec (make-vector mailbox-size 0) ])
+  (let ([ vec (make-fxvector mailbox-size 0) ])
     (for* ([ rank (in-range 8) ]
            [ file (in-range 8) ])
-      (let ([val (vector-ref raw (+ (* rank 8) file)) ])
-        (vector-set! vec (file-rank->idx file rank) val)))
+      (let ([val (vector-ref raw (fx+ (fx* rank 8) file)) ])
+        (fxvector-set! vec (file-rank->idx file rank) val)))
     vec))
 
 (define (flip src)
   (let ([ dst (make-vector (vector-length src) 0) ])
     (for* ([ rank (in-range 8) ]
            [ file (in-range 8) ])
-      (let ([ val (vector-ref src (+ (* rank 8) file)) ])
-        (vector-set! dst (+ (* (- 7 rank) 8) file) val)))
+      (let ([ val (vector-ref src (fx+ (fx* rank 8) file)) ])
+        (vecset! dst (fx+ (fx* (fx- 7 rank) 8) file) val)))
     dst))
 
 (define pawn-pst-white (init-pst pawn-raw))
@@ -131,13 +132,13 @@
   (require rackunit)
 
   ;; White Pawn
-  (check-equal? (vector-ref pawn-pst-white (pos->idx "e4")) 20)
-  (check-equal? (vector-ref pawn-pst-white (pos->idx "e5")) 25)
-  (check-equal? (vector-ref pawn-pst-white (pos->idx "b2")) 10)
+  (check-equal? (fxvector-ref pawn-pst-white (pos->idx "e4")) 20)
+  (check-equal? (fxvector-ref pawn-pst-white (pos->idx "e5")) 25)
+  (check-equal? (fxvector-ref pawn-pst-white (pos->idx "b2")) 10)
 
   ;; Black Pawn
-  (check-equal? (vector-ref pawn-pst-black (pos->idx "d5")) 20)
-  (check-equal? (vector-ref pawn-pst-black (pos->idx "d4")) 25)
-  (check-equal? (vector-ref pawn-pst-black (pos->idx "g7")) 10)
+  (check-equal? (fxvector-ref pawn-pst-black (pos->idx "d5")) 20)
+  (check-equal? (fxvector-ref pawn-pst-black (pos->idx "d4")) 25)
+  (check-equal? (fxvector-ref pawn-pst-black (pos->idx "g7")) 10)
 
   )

@@ -3,6 +3,7 @@
 (module+ test
   (require "./board.rkt"
            "./evaluation.rkt"
+           "./global.rkt"
            "./make-move.rkt"
            "./piece.rkt"
            "./fen.rkt")
@@ -18,7 +19,7 @@
     ;; All squares are empty
     (for* ([ file (in-range 8) ]
            [ rank (in-range 8) ])
-      (check-equal? (bytes-ref squares (file-rank->idx file rank))
+      (check-equal? (get-square squares (file-rank->idx file rank))
                     empty-square))
 
     )
@@ -29,7 +30,7 @@
   (let ([ b (fen->board) ])
     (check-equal? (evaluate b) 0)
     ;; Remove the White Queen
-    (bytes-set! (board-squares b) 94 empty-square)
+    (set-square! (board-squares b) 94 empty-square)
     ;; Depends on pst value
     (check-equal? (evaluate b) -895))
 

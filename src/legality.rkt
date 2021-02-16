@@ -1,11 +1,11 @@
 #lang racket
 
-(require "./board.rkt")
-(require "./move.rkt")
-(require "./piece.rkt")
+(require "./board.rkt"
+         "./global.rkt"
+         "./move.rkt"
+         "./piece.rkt")
 
-(require racket/fixnum
-         racket/performance-hint)
+(require racket/performance-hint)
 
 (provide is-legal?)
 
@@ -77,25 +77,25 @@
 (define (adjacent-attacking? squares king-idx other-king-idx enemy? white?)
   (or
    ;; King attacks
-   (or (= king-idx (+ other-king-idx north))
-       (= king-idx (+ other-king-idx north-east))
-       (= king-idx (+ other-king-idx east))
-       (= king-idx (+ other-king-idx south-east))
-       (= king-idx (+ other-king-idx south))
-       (= king-idx (+ other-king-idx south-west))
-       (= king-idx (+ other-king-idx west))
-       (= king-idx (+ other-king-idx north-west)))
+   (or (fx= king-idx (fx+ other-king-idx north))
+       (fx= king-idx (fx+ other-king-idx north-east))
+       (fx= king-idx (fx+ other-king-idx east))
+       (fx= king-idx (fx+ other-king-idx south-east))
+       (fx= king-idx (fx+ other-king-idx south))
+       (fx= king-idx (fx+ other-king-idx south-west))
+       (fx= king-idx (fx+ other-king-idx west))
+       (fx= king-idx (fx+ other-king-idx north-west)))
 
    ;; Pawn attacks from the east
-   (let ([ src (bytes-ref squares
-                          (+ king-idx
+   (let ([ src (get-square squares
+                          (fx+ king-idx
                              (if white? north-east south-east))) ])
      (and (is-pawn? src)
           (enemy? src)))
 
    ;; Pawn attacks from the west
-   (let ([ src (bytes-ref squares
-                          (+ king-idx
+   (let ([ src (get-square squares
+                          (fx+ king-idx
                              (if white? north-west south-west))) ])
      (and (is-pawn? src)
           (enemy? src)))))
@@ -104,7 +104,7 @@
   (let loop ([ offsets knight-offsets ])
     (if (null? offsets)
         #f
-        (let ([ src (bytes-ref squares (+ king-idx (car offsets))) ])
+        (let ([ src (get-square squares (fx+ king-idx (car offsets))) ])
           (if (and (is-knight? src) (enemy? src))
               #t
               (loop (cdr offsets)))))))
@@ -113,7 +113,7 @@
 ;; #t for own?
 (define (ray-attacking? squares king-idx own? enemy? dir is-attacker?)
   (let loop ([ idx (fx+ king-idx dir) ])
-    (let ([ src (bytes-ref squares idx) ])
-      (cond [ (own? src)           #f                 ]
+    (let ([ src (get-square squares idx) ])
+      (cond [ (own? src)             #f                     ]
             [ (fx= src empty-square) (loop (fx+ idx dir)) ]
-            [ else                 (is-attacker? src) ]))))
+            [ else                   (is-attacker? src)     ]))))

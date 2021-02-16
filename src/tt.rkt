@@ -1,7 +1,7 @@
  #lang racket
 
-(require racket/fixnum
-         racket/performance-hint)
+(require "./global.rkt")
+(require racket/performance-hint)
 
 (provide read-tt-entry
          write-tt-entry!
@@ -32,7 +32,7 @@
 
 ;; Returns (cons score move) or #f if no matching entry found
 (define (read-tt-entry key draft alpha beta)
-  (let ([ entry (vector-ref tt-table (hash-index key)) ])
+  (let ([ entry (vecref tt-table (hash-index key)) ])
     (if (and entry (fx= key (tt-zobrist-key entry)))
         ;; Entry found, and it matches the key
         (let ([ best-move (tt-best-move entry) ])
@@ -51,13 +51,13 @@
         #f)))
 
 (define (write-tt-entry! key draft score best-move type)
-  (vector-set! tt-table
-               (hash-index key)
-               (tt key
-                   draft
-                   best-move
-                   type
-                   score)))
+  (vecset! tt-table
+           (hash-index key)
+           (tt key
+               draft
+               best-move
+               type
+               score)))
 
 (module+ test
   (require math/base

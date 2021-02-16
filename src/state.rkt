@@ -1,14 +1,9 @@
 #lang racket
 
-(require "./fixnum-fields.rkt")
+(require "./fixnum-fields.rkt"
+         "./global.rkt")
 
-(require racket/require
-         (filtered-in
-          (λ (name)
-            (and (regexp-match #rx"^unsafe-fx" name)
-                 (regexp-replace #rx"unsafe-" name "")))
-          racket/unsafe/ops)
-         racket/performance-hint)
+(require racket/performance-hint)
 
 (provide castling-zobrist
          initial-game-state

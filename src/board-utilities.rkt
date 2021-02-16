@@ -1,6 +1,7 @@
 #lang racket
 
 (require "./board.rkt"
+         "./global.rkt"
          "./piece.rkt"
          "./state.rkt")
 
@@ -22,7 +23,7 @@
     (printf "---------------------------------\n|")
     (for ([ file (in-range 8) ])
       (let* ([ idx   (+ 21 file (* rank 10))           ]
-             [ piece (bytes-ref (board-squares b) idx) ]
+             [ piece (get-square (board-squares b) idx) ]
              [ sym   (piece-symbol piece)              ])
         (printf " ~a |" sym)))
     (printf "  ~a\n" (- 8 rank)))
@@ -59,4 +60,3 @@
     (if (non-empty-string? str)
         str
         "-")))
-

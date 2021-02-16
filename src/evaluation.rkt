@@ -1,14 +1,8 @@
 #lang racket
 
 (require "./board.rkt"
+         "./global.rkt"
          "./piece.rkt")
-
-(require racket/require
-         (filtered-in
-          (λ (name)
-            (and (regexp-match #rx"^unsafe-fx" name)
-                 (regexp-replace #rx"unsafe-" name "")))
-          racket/unsafe/ops))
 
 (provide evaluate)
 
@@ -18,7 +12,7 @@
           (for*/sum ([ rank (in-range 8) ]
                      [ file (in-range 8) ])
             (let* ([ idx    (file-rank->idx file rank)        ]
-                   [ piece  (bytes-ref (board-squares b) idx) ])
+                   [ piece  (get-square (board-squares b) idx) ])
               (if (fx= piece empty-square)
                   0
                   (piece-value b piece idx)))) ])

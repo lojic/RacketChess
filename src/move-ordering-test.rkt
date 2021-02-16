@@ -3,6 +3,7 @@
 (module+ test
   (require "./board.rkt"
            "./fen.rkt"
+           "./global.rkt"
            "./move.rkt"
            "./move-ordering.rkt"
            "./movement.rkt")
@@ -14,21 +15,21 @@
     (order-moves! b)
     (let* ([ vec (vector-copy (tactical-moves b) 0 (add1 (tactical-head b))) ]
            [ c5 (pos->idx "c5") ]
-           [ br (bytes-ref squares c5) ]
+           [ br (get-square squares c5) ]
            [ d5 (pos->idx "d5") ]
-           [ bq (bytes-ref squares d5) ]
+           [ bq (get-square squares d5) ]
            [ d6 (pos->idx "d6") ]
-           [ bp (bytes-ref squares d6) ]
+           [ bp (get-square squares d6) ]
            [ f5 (pos->idx "f5") ]
-           [ bn (bytes-ref squares f5) ]
+           [ bn (get-square squares f5) ]
            [ c4 (pos->idx "c4") ]
-           [ wr (bytes-ref squares c4) ]
+           [ wr (get-square squares c4) ]
            [ d4 (pos->idx "d4") ]
-           [ leftp (bytes-ref squares d4) ]
+           [ leftp (get-square squares d4) ]
            [ e4 (pos->idx "e4") ]
-           [ rightp (bytes-ref squares e4) ]
+           [ rightp (get-square squares e4) ]
            [ f4 (pos->idx "f4") ]
-           [ wb (bytes-ref squares f4) ])
+           [ wb (get-square squares f4) ])
       (check-equal? (vector-length vec) 5)
       (check-equal? (vector-ref vec 0)
                     (create-move rightp e4 d5 #:captured-piece bq))

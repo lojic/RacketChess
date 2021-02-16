@@ -2,8 +2,9 @@
 
 ;; Functions that are not speed sensitive
 
-(require "./board.rkt")
-(require "./piece.rkt")
+(require "./board.rkt"
+         "./global.rkt"
+         "./piece.rkt")
 
 (provide get-pieces-file-rank)
 
@@ -21,7 +22,7 @@
               [ file (in-range 8) ])
     (let* ([ idx   (file-rank->idx file rank)        ]
            [ pos   (idx->pos idx)                    ]
-           [ piece (bytes-ref (board-squares b) idx) ])
+           [ piece (get-square (board-squares b) idx) ])
       (if (pred? piece)
           (cons (list piece (string-ref pos 0) (string-ref pos 1)) result)
           result))))

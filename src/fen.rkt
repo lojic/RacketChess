@@ -3,6 +3,7 @@
 ;; See https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation
 
 (require "./board.rkt"
+         "./global.rkt"
          "./piece.rkt"
          "./state.rkt")
 
@@ -88,7 +89,7 @@
             (loop (+ file (- (char->integer c) (char->integer #\0))) (cdr chars))
             (let* ([ piece (symbol-piece (~a c)) ]
                    [ idx   (file-rank->idx file rank) ])
-              (bytes-set! squares idx piece)
+              (set-square! squares idx piece)
               (when (is-king? piece)
                 (fen->board-set-king-pos! b piece idx))
               (loop (add1 file) (cdr chars))))))))
@@ -193,7 +194,7 @@
           (add-blanks blanks result)
 
           ;; Get the next square
-          (let ([ piece (bytes-ref (board-squares b)
+          (let ([ piece (get-square (board-squares b)
                                    (file-rank->idx file rank)) ]
                 [ file (add1 file) ])
             (if (is-piece? piece)
@@ -272,12 +273,12 @@
   (let* ([ b       (create-board)    ]
          [ squares (board-squares b) ])
     (check-equal? (board->fen b) "8/8/8/8/8/8/8/8 w KQkq - 0 1")
-    (bytes-set! squares (pos->idx "e1") white-king)
-    (bytes-set! squares (pos->idx "a1") white-rook)
-    (bytes-set! squares (pos->idx "h1") white-rook)
-    (bytes-set! squares (pos->idx "e8") black-king)
-    (bytes-set! squares (pos->idx "a8") black-rook)
-    (bytes-set! squares (pos->idx "h8") black-rook)
+    (set-square! squares (pos->idx "e1") white-king)
+    (set-square! squares (pos->idx "a1") white-rook)
+    (set-square! squares (pos->idx "h1") white-rook)
+    (set-square! squares (pos->idx "e8") black-king)
+    (set-square! squares (pos->idx "a8") black-rook)
+    (set-square! squares (pos->idx "h8") black-rook)
     (check-equal? (board->fen b) "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1"))
 
   (let ([ b (fen->board initial-fen) ])

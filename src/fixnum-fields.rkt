@@ -7,8 +7,9 @@
 ;;
 ;; TODO: ensure total width specified fits in a fixnum
 
-(require (for-syntax racket/syntax syntax/parse racket/fixnum)
-         racket/fixnum
+(require "./global.rkt")
+
+(require (for-syntax racket/syntax syntax/parse "./global.rkt")
          racket/performance-hint)
 
 (provide fixnum-fields)

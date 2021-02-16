@@ -1,20 +1,12 @@
 #lang racket
 
 (require "./board.rkt"
+         "./global.rkt"
          "./piece.rkt"
          "./state.rkt")
 
 (require math/base
          racket/performance-hint)
-
-(require racket/require
-         (only-in racket/fixnum make-fxvector)
-         ; racket/fixnum
-         (filtered-in
-          (λ (name)
-            (and (regexp-match #rx"^unsafe-fx" name)
-                 (regexp-replace #rx"unsafe-" name "")))
-          racket/unsafe/ops))
 
 (provide generate-zobrist-key
          square-keys
@@ -28,7 +20,6 @@
 (define castle-keys (make-fxvector 16 0))
 (define ep-keys     (make-fxvector (* 10 12) 0))
 
-;; TODO change back to 60 ???
 (define-inline (get-random-number)
   (random-bits 60))
 
@@ -78,7 +69,7 @@
   (for* ([ rank (in-range 8) ]
          [ file (in-range 8) ])
     (let* ([ idx   (file-rank->idx file rank)        ]
-           [ piece (bytes-ref (board-squares b) idx) ])
+           [ piece (get-square (board-squares b) idx) ])
       (when (not (fx= piece empty-square))
         (set! key (xor-piece key piece idx)))))
 

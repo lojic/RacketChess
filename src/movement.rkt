@@ -1,12 +1,12 @@
 #lang racket
 
 (require "./board.rkt"
+         "./global.rkt"
          "./move-ordering.rkt"
          "./move.rkt"
          "./piece.rkt"
          "./state.rkt")
-(require racket/fixnum
-         racket/performance-hint)
+(require racket/performance-hint)
 
 (provide generate-bishop-moves!
          generate-king-moves!
@@ -28,8 +28,8 @@
 
   (for* ([ rank (in-range 8) ]
          [ file (in-range 8) ])
-    (let* ([ idx   (+ 21 file (* rank 10))           ]
-           [ piece (bytes-ref (board-squares b) idx) ])
+    (let* ([ idx   (fx+ 21 file (fx* rank 10))        ]
+           [ piece (get-square (board-squares b) idx) ])
       (when (is-right-color-piece? piece is-white?)
         (match (piece-type piece)
           [ #b001 (generate-pawn-moves!   b idx piece #:quiet-moves? quiet-moves?) ]
@@ -86,12 +86,12 @@
         [ qhead  (quiet-head b)     ]
         [ qi     0                  ])
     (λ ()
-      (cond [ (<= ti thead)
-              (set! ti (add1 ti))
-              (vector-ref tmoves (sub1 ti)) ]
-            [ (<= qi qhead)
-              (set! qi (add1 qi))
-              (vector-ref qmoves (sub1 qi)) ]
+      (cond [ (fx<= ti thead)
+              (set! ti (fx+ 1 ti))
+              (fxvector-ref tmoves (sub1 ti)) ]
+            [ (fx<= qi qhead)
+              (set! qi (fx+ 1 qi))
+              (fxvector-ref qmoves (sub1 qi)) ]
             [ else #f ]))))
 
 ;; --------------------------------------------------------------------------------------------
@@ -99,38 +99,38 @@
 ;; --------------------------------------------------------------------------------------------
 
 (define-inline (add-quiet-move! b m)
-  (let ([ head (add1 (quiet-head b)) ])
+  (let ([ head (fx+ 1 (quiet-head b)) ])
     (set-quiet-head! b head)
-    (vector-set! (quiet-moves b) head m)))
+    (vecset! (quiet-moves b) head m)))
 
 (define-inline (add-tactical-move! b m)
-  (let ([ head (add1 (tactical-head b)) ])
+  (let ([ head (fx+ 1 (tactical-head b)) ])
     (set-tactical-head! b head)
-    (vector-set! (tactical-moves b) head m)))
+    (vecset! (tactical-moves b) head m)))
 
 (define (generate-castle-moves! b idx piece is-white?)
   (let ([ s       (board-game-state b) ]
         [ squares (board-squares b)    ])
     ;; King side
     (when (and (if is-white? (state-w-kingside-ok? s) (state-b-kingside-ok? s))
-               (= empty-square (bytes-ref squares (+ idx 1)))
-               (= empty-square (bytes-ref squares (+ idx 2))))
+               (fx= empty-square (get-square squares (fx+ idx 1)))
+               (fx= empty-square (get-square squares (fx+ idx 2))))
       (add-quiet-move! b
-                       (create-move piece idx (+ idx 2) #:is-castle-kingside? #t)))
+                       (create-move piece idx (fx+ idx 2) #:is-castle-kingside? #t)))
     ;; Queen side
     (when (and (if is-white? (state-w-queenside-ok? s) (state-b-queenside-ok? s))
-               (= empty-square (bytes-ref squares (- idx 1)))
-               (= empty-square (bytes-ref squares (- idx 2)))
-               (= empty-square (bytes-ref squares (- idx 3))))
+               (fx= empty-square (get-square squares (fx- idx 1)))
+               (fx= empty-square (get-square squares (fx- idx 2)))
+               (fx= empty-square (get-square squares (fx- idx 3))))
       (add-quiet-move! b
-                       (create-move piece idx (- idx 2) #:is-castle-queenside? #t)))))
+                       (create-move piece idx (fx- idx 2) #:is-castle-queenside? #t)))))
 
 (define (generate-offset-moves! b idx piece offsets quiet-moves?)
   (let ([ squares (board-squares b) ])
     (for ([ offset (in-list offsets) ])
-      (let* ([ target-idx (+ idx offset)                 ]
-             [ target     (bytes-ref squares target-idx) ])
-        (cond [ (= target empty-square)
+      (let* ([ target-idx (fx+ idx offset)                ]
+             [ target     (get-square squares target-idx) ])
+        (cond [ (fx= target empty-square)
                 (when quiet-moves?
                   (add-quiet-move! b (create-move piece idx target-idx))) ]
               [ (is-other-piece? piece target)
@@ -141,29 +141,29 @@
   (let-values ([ (white? n1-idx n2-idx nw-idx w-idx ne-idx e-idx min8th max8th min2nd max2nd)
                  (if (is-white? piece)
                      (values #t
-                             (+ idx north)
-                             (+ idx north north)
-                             (+ idx north-west)
-                             (+ idx west)
-                             (+ idx north-east)
-                             (+ idx east)
+                             (fx+ idx north)
+                             (fx+ idx north north)
+                             (fx+ idx north-west)
+                             (fx+ idx west)
+                             (fx+ idx north-east)
+                             (fx+ idx east)
                              21 28 81 88)
                      (values #f
-                             (+ idx south)
-                             (+ idx south south)
-                             (+ idx south-west)
-                             (+ idx west)
-                             (+ idx south-east)
-                             (+ idx east)
+                             (fx+ idx south)
+                             (fx+ idx south south)
+                             (fx+ idx south-west)
+                             (fx+ idx west)
+                             (fx+ idx south-east)
+                             (fx+ idx east)
                              91 98 31 38)) ])
-    (let* ([ squares (board-squares b)          ]
-           [ n1      (bytes-ref squares n1-idx) ]
-           [ n2      (bytes-ref squares n2-idx) ]
-           [ nw      (bytes-ref squares nw-idx) ]
-           [ ne         (bytes-ref squares ne-idx) ]
-           [ last-rank? (<= min8th n1-idx max8th)  ])
+    (let* ([ squares    (board-squares b)           ]
+           [ n1         (get-square squares n1-idx) ]
+           [ n2         (get-square squares n2-idx) ]
+           [ nw         (get-square squares nw-idx) ]
+           [ ne         (get-square squares ne-idx) ]
+           [ last-rank? (<= min8th n1-idx max8th)   ])
 
-      (when (and (= n1 empty-square) quiet-moves?)
+      (when (and (fx= n1 empty-square) quiet-moves?)
         ;; Single push
         (if last-rank?
             ;; Quiet promotions
@@ -173,8 +173,8 @@
             (add-quiet-move! b (create-move piece idx n1-idx)))
 
         ;; Double push (only if single push was allowed)
-        (when (and (<= min2nd idx max2nd)
-                   (= n2 empty-square))
+        (when (and (fx<= min2nd idx max2nd)
+                   (fx= n2 empty-square))
           (add-quiet-move! b (create-move piece idx n2-idx))))
 
 
@@ -183,22 +183,22 @@
               (if last-rank?
                   (generate-capture-promotions! b white? piece idx nw-idx nw)
                   (add-tactical-move! b (create-move piece idx nw-idx #:captured-piece nw))) ]
-            [ (= (get-ep-idx b) nw-idx)
+            [ (fx= (get-ep-idx b) nw-idx)
               ;; En passant capture
               (add-tactical-move! b
                                  (create-move piece idx nw-idx
-                                              #:captured-piece (bytes-ref squares w-idx) #:is-ep-capture? #t)) ])
+                                              #:captured-piece (get-square squares w-idx) #:is-ep-capture? #t)) ])
 
       ;; Capture north east
       (cond [ (is-other-piece? piece ne)
               (if last-rank?
                   (generate-capture-promotions! b white? piece idx ne-idx ne)
                   (add-tactical-move! b (create-move piece idx ne-idx #:captured-piece ne))) ]
-            [ (= (get-ep-idx b) ne-idx)
+            [ (fx= (get-ep-idx b) ne-idx)
               ;; En passant capture
               (add-tactical-move! b
                                  (create-move piece idx ne-idx
-                                              #:captured-piece (bytes-ref squares e-idx) #:is-ep-capture? #t)) ]))))
+                                              #:captured-piece (get-square squares e-idx) #:is-ep-capture? #t)) ]))))
 
 ;; Even though it's a quiet promotion, we add tactical moves since a
 ;; promotion is a great move.
@@ -259,13 +259,13 @@
                                                      black-bishop))))
 
 (define (generate-sliding-moves! b idx piece direction quiet-moves?)
-  (let loop ([ target-idx (+ idx direction) ])
-    (let ([ target (bytes-ref (board-squares b) target-idx) ])
-      (cond [ (= target empty-square)
+  (let loop ([ target-idx (fx+ idx direction) ])
+    (let ([ target (get-square (board-squares b) target-idx) ])
+      (cond [ (fx= target empty-square)
               (when quiet-moves?
                 ;; Add quiet move and continue
                 (add-quiet-move! b (create-move piece idx target-idx)))
-              (loop (+ target-idx direction)) ]
+              (loop (fx+ target-idx direction)) ]
             [ (is-other-piece? piece target)
               ;; Add tactical move for capture and exit
               (add-tactical-move! b
@@ -274,13 +274,13 @@
 (define (print-moves b)
   ;; Tactical moves
   (printf "Tactical moves:\n")
-  (for ([ i (in-range (add1 (tactical-head b))) ])
-    (print-move (vector-ref (tactical-moves b) i)))
+  (for ([ i (in-range (fx+ 1 (tactical-head b))) ])
+    (print-move (fxvector-ref (tactical-moves b) i)))
 
   ;; Quiet moves
   (printf "Quiet moves:\n")
-  (for ([ i (in-range (add1 (quiet-head b))) ])
-    (print-move (vector-ref (quiet-moves b) i)))
+  (for ([ i (in-range (fx+ 1 (quiet-head b))) ])
+    (print-move (fxvector-ref (quiet-moves b) i)))
 
   (printf "\n"))
 

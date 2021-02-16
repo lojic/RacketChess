@@ -2,17 +2,12 @@
 
 (require "./board.rkt"
          "./board-utilities.rkt"
+         "./global.rkt"
          "./piece.rkt"
          "./move.rkt"
          "./state.rkt"
          "./zobrist.rkt")
-(require racket/require
-         (filtered-in
-          (λ (name)
-            (and (regexp-match #rx"^unsafe-fx" name)
-                 (regexp-replace #rx"unsafe-" name "")))
-          racket/unsafe/ops)
-         racket/performance-hint)
+(require racket/performance-hint)
 
 (provide get-hash-key
          make-move!
@@ -65,8 +60,8 @@
   ; Add "to" piece
   (xor-piece! to-piece to-idx)
 
-  (bytes-set! squares to-idx to-piece)
-  (bytes-set! squares from-idx empty-square))
+  (set-square! squares to-idx to-piece)
+  (set-square! squares from-idx empty-square))
 
 (define (make-move! b m)
   ;; Save game state and increment move-i
@@ -82,7 +77,7 @@
          [ piece      orig-piece                  ]
          [ src-idx    (move-src-idx m)            ]
          [ dst-idx    (move-dst-idx m)            ]
-         [ dst        (bytes-ref squares dst-idx) ])
+         [ dst        (get-square squares dst-idx) ])
     (let ([ piece
             (cond [ (is-pawn? piece)
                     (make-pawn-move! b squares m white? piece src-idx dst-idx) ]
@@ -103,7 +98,7 @@
       (set-whites-move?! b (not white?))
 
       ;; Increment depth
-      (set-board-depth! b (add1 (board-depth b))))))
+      (set-board-depth! b (fx+ 1 (board-depth b))))))
 
 (define (revoke-rook-castling! b white? src-idx dst-idx)
   (let* ([ orig (board-game-state b) ]
@@ -111,36 +106,36 @@
     (if white?
         (begin
           ;; Moving white queenside rook
-          (when (and (= 91 src-idx) (state-w-queenside-ok? s))
+          (when (and (fx= 91 src-idx) (state-w-queenside-ok? s))
             (set! s (unset-state-w-queenside-ok? s)))
 
           ;; Moving white kingside rook
-          (when (and (= 98 src-idx) (state-w-kingside-ok? s))
+          (when (and (fx= 98 src-idx) (state-w-kingside-ok? s))
             (set! s (unset-state-w-kingside-ok? s)))
 
           ;; Capturing black queenside rook
-          (when (and (= 21 dst-idx) (state-b-queenside-ok? s))
+          (when (and (fx= 21 dst-idx) (state-b-queenside-ok? s))
             (set! s (unset-state-b-queenside-ok? s)))
 
           ;; Capturing black kingside rook
-          (when (and (= 28 dst-idx) (state-b-kingside-ok? s))
+          (when (and (fx= 28 dst-idx) (state-b-kingside-ok? s))
             (set! s (unset-state-b-kingside-ok? s))))
 
         (begin
           ;; Moving black queenside rook
-          (when (and (= 21 src-idx) (state-b-queenside-ok? s))
+          (when (and (fx= 21 src-idx) (state-b-queenside-ok? s))
             (set! s (unset-state-b-queenside-ok? s)))
 
           ;; Moving black kingside rook
-          (when (and (= 28 src-idx) (state-b-kingside-ok? s))
+          (when (and (fx= 28 src-idx) (state-b-kingside-ok? s))
             (set! s (unset-state-b-kingside-ok? s)))
 
           ;; Capturing white queenside rook
-          (when (and (= 91 dst-idx) (state-w-queenside-ok? s))
+          (when (and (fx= 91 dst-idx) (state-w-queenside-ok? s))
             (set! s (unset-state-w-queenside-ok? s)))
 
           ;; Capturing white kingside rook
-          (when (and (= 98 dst-idx) (state-w-kingside-ok? s))
+          (when (and (fx= 98 dst-idx) (state-w-kingside-ok? s))
             (set! s (unset-state-w-kingside-ok? s)))))
 
     (when (not (fx= orig s))
@@ -162,29 +157,29 @@
 
   ;; Handle castling
   (let ([ dist (- dst-idx src-idx) ])
-    (cond [ (= dist e2)
+    (cond [ (fx= dist e2)
             ;; Move king side rook
-            (let* ([ from (+ src-idx e3) ]
-                   [ rook (bytes-ref squares from) ]
-                   [ to   (+ src-idx east) ])
+            (let* ([ from (fx+ src-idx e3) ]
+                   [ rook (get-square squares from) ]
+                   [ to   (fx+ src-idx east) ])
               (xor-piece! rook from) ; Remove rook
               (xor-piece! rook to)   ; Add rook
-              (bytes-set! squares to rook)
-              (bytes-set! squares from empty-square)) ]
+              (set-square! squares to rook)
+              (set-square! squares from empty-square)) ]
 
-          [ (= dist w2)
+          [ (fx= dist w2)
             ;; Move queenside rook
-            (let* ([ from (+ src-idx w4) ]
-                   [ rook (bytes-ref squares from) ]
-                   [ to   (+ src-idx west) ])
+            (let* ([ from (fx+ src-idx w4) ]
+                   [ rook (get-square squares from) ]
+                   [ to   (fx+ src-idx west) ])
               (xor-piece! rook from) ; Remove rook
               (xor-piece! rook to)   ; Add rook
-              (bytes-set! squares to rook)
-              (bytes-set! squares from empty-square)) ])))
+              (set-square! squares to rook)
+              (set-square! squares from empty-square)) ])))
 
 ;; Returns the source piece (possibly modified)
 (define (make-pawn-move! b squares m white? piece src-idx dst-idx)
-  (let ([ dist (- dst-idx src-idx) ])
+  (let ([ dist (fx- dst-idx src-idx) ])
 
     ;; NOTE: the cond clauses are mutually exclusive, only one of them
     ;;       could occur:
@@ -195,9 +190,9 @@
     (cond
      ;; If a pawn has moved 2 spaces, record the en
      ;; passant capture idx
-     [ (or (= dist n2) (= dist s2))
+     [ (or (fx= dist n2) (fx= dist s2))
        ;; Set the EP target
-       (let ([ ep-idx (+ src-idx (arithmetic-shift dist -1)) ])
+       (let ([ ep-idx (fx+ src-idx (fxrshift dist 1)) ])
          (xor-ep-square! ep-idx)
          (set-ep-idx! b ep-idx))
        piece ]
@@ -207,9 +202,9 @@
        ;; We've already stored the captured pawn in
        ;; captured_piece, so just remove the captured pawn
        ;; from the board
-       (let ([ target (+ dst-idx (if white? south north)) ])
+       (let ([ target (fx+ dst-idx (if white? south north)) ])
          (xor-piece! (move-captured-piece m) target) ; Removed captured ep pawn
-         (bytes-set! squares target empty-square))
+         (set-square! squares target empty-square))
        piece ]
 
      ;; Handle promotion - return the promoted piece instead of the
@@ -253,33 +248,33 @@
     ;; Move piece back to src position. This also undoes a promotion
     ;; since the src piece will be a pawn.
     (xor-piece! piece src-idx) ; Add piece to src-idx
-    (bytes-set! squares src-idx piece)
+    (set-square! squares src-idx piece)
 
     (if (fx> captured-piece 0)
         ;; Unmake capture move
         (cond [ (move-is-ep-capture? m)
                 ;; Unmake en passant capture
                 (xor-piece! piece dst-idx) ; remove pawn
-                (bytes-set! squares dst-idx empty-square)
+                (set-square! squares dst-idx empty-square)
 
-                (let ([ target (+ dst-idx
-                                  (if white? south north))])
+                (let ([ target (fx+ dst-idx
+                                    (if white? south north))])
                   (xor-piece! captured-piece target) ; Add captured piece back
-                  (bytes-set! squares target captured-piece)) ]
+                  (set-square! squares target captured-piece)) ]
               [ else
                 ;; Unmake regular capture
                 (if (fx> promoted-piece 0)
                     (xor-piece! promoted-piece dst-idx) ; Remove promoted piece
                     (xor-piece! piece dst-idx))         ; Remove piece
                 (xor-piece! captured-piece dst-idx) ; Add captured piece back
-                (bytes-set! squares dst-idx captured-piece) ])
+                (set-square! squares dst-idx captured-piece) ])
 
         ;; Unmake quiet move
         (begin
           (if (fx> promoted-piece 0)
               (xor-piece! promoted-piece dst-idx) ; Remove promoted piece
               (xor-piece! piece dst-idx))         ; Remove piece
-          (bytes-set! squares dst-idx empty-square)))
+          (set-square! squares dst-idx empty-square)))
 
     (when (is-king? piece)
       (unmake-king-move! b squares m white? piece src-idx))))
@@ -288,29 +283,29 @@
   ;; Handle un-castling.
   (cond [ (move-is-castle-kingside? m)
           ;; Move king side rook back
-          (let* ([ from (+ src-idx east) ]
-                 [ rook (bytes-ref squares from) ]
-                 [ to   (+ src-idx e3) ])
+          (let* ([ from (fx+ src-idx east) ]
+                 [ rook (get-square squares from) ]
+                 [ to   (fx+ src-idx e3) ])
             (xor-piece! rook from) ; Remove rook
             (xor-piece! rook to)   ; Add rook
-            (bytes-set! squares to rook)
-            (bytes-set! squares from empty-square)) ]
+            (set-square! squares to rook)
+            (set-square! squares from empty-square)) ]
         [ (move-is-castle-queenside? m)
           ;; Move queen side rook back
-          (let* ([ from (+ src-idx west) ]
-                 [ rook (bytes-ref squares from) ]
-                 [ to   (+ src-idx w4) ])
+          (let* ([ from (fx+ src-idx west) ]
+                 [ rook (get-square squares from) ]
+                 [ to   (fx+ src-idx w4) ])
             (xor-piece! rook from) ; Remove rook
             (xor-piece! rook to)   ; Add rook
-            (bytes-set! squares to rook)
-            (bytes-set! squares from empty-square)) ]))
+            (set-square! squares to rook)
+            (set-square! squares from empty-square)) ]))
 
 (define (run)
   (let* ([ b (create-board) ]
          [ squares (board-squares b) ]
          [ src-idx (pos->idx "e2") ]
          [ dst-idx (pos->idx "e4") ]
-         [ src (bytes-ref squares src-idx) ]
+         [ src (get-square squares src-idx) ]
          [ m (create-move src src-idx dst-idx) ])
     (print-board b #:full? #t)
     (make-move! b m)

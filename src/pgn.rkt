@@ -2,6 +2,7 @@
 
 (require "./board-slow.rkt"
          "./board.rkt"
+         "./global.rkt"
          "./make-move.rkt"
          "./move.rkt"
          "./movement.rkt"
@@ -123,16 +124,16 @@
   (define squares (board-squares b))
 
   (let* ([ dst-idx  (pos->idx (format "~a~a" to-file to-rank))    ]
-         [ dst      (bytes-ref squares dst-idx)                   ]
+         [ dst      (get-square squares dst-idx)                   ]
          [ src-rank (if white?
                         (sub1 to-rank)
                         (add1 to-rank))                           ]
          [ src-idx  (pos->idx (format "~a~a" from-file src-rank)) ]
-         [ src      (bytes-ref squares src-idx)                   ])
+         [ src      (get-square squares src-idx)                   ])
     (if (= dst empty-square)
         ;; En passant capture
         (let* ([ cap-idx   (pos->idx (format "~a~a" to-file src-rank)) ]
-               [ cap-piece (bytes-ref squares cap-idx)                 ])
+               [ cap-piece (get-square squares cap-idx)                 ])
           (create-move src src-idx dst-idx
                        #:captured-piece cap-piece
                        #:is-ep-capture? #t
@@ -146,12 +147,12 @@
   (define squares (board-squares b))
 
   (let* ([ dst-idx (pos->idx (format "~a~a" to-file to-rank))               ]
-         [ dst     (bytes-ref squares dst-idx)                              ]
+         [ dst     (get-square squares dst-idx)                              ]
          [ s1-idx  (+ dst-idx (if white? south north))                   ]
-         [ s1      (bytes-ref squares s1-idx)                               ]
+         [ s1      (get-square squares s1-idx)                               ]
          [ s1-ok   (and (is-pawn? s1) (is-right-color-piece? s1 white?)) ]
          [ s2-idx  (+ s1-idx (if white? south north))                    ]
-         [ s2      (bytes-ref squares s2-idx)                               ]
+         [ s2      (get-square squares s2-idx)                               ]
          [ s2-ok   (and (is-pawn? s2) (is-right-color-piece? s2 white?)) ])
     (cond [ (and (not s1-ok) s2-ok)
             ;; Double push
@@ -171,7 +172,7 @@
                  (pgn-get-src-idx b letter white? from-file from-rank to-file-rank) ]
                [ dst-idx (pos->idx to-file-rank) ])
     (if capture
-        (let ([ piece (bytes-ref (board-squares b) dst-idx) ])
+        (let ([ piece (get-square (board-squares b) dst-idx) ])
           (create-move src src-idx dst-idx #:captured-piece piece))
         (create-move src src-idx dst-idx))))
 
@@ -258,7 +259,7 @@
                            [ (string=? castle "O-O-O") #f ]
                            [ else (error "pgn-castle-move: invalid castle spec") ]) ]
          [ king-idx (if white? (pos->idx "e1") (pos->idx "e8")) ]
-         [ king     (bytes-ref squares king-idx)                ]
+         [ king     (get-square squares king-idx)                ]
          [ dst-pos  (if white?
                         (if kingside? "g1" "c1")
                         (if kingside? "g8" "c8")) ]
@@ -276,14 +277,14 @@
                  (if white?
                      (values (pos->idx "e1") (pos->idx "g1"))
                      (values (pos->idx "e8") (pos->idx "g8"))) ])
-    (create-move (bytes-ref (board-squares b) src-idx) src-idx dst-idx #:is-castle-kingside? #t)))
+    (create-move (get-square (board-squares b) src-idx) src-idx dst-idx #:is-castle-kingside? #t)))
 
 (define (pgn-castle-queenside b white?)
   (let-values ([ (src-idx dst-idx)
                  (if white?
                      (values (pos->idx "e1") (pos->idx "c1"))
                      (values (pos->idx "e8") (pos->idx "c8"))) ])
-    (create-move (bytes-ref (board-squares b) src-idx) src-idx dst-idx #:is-castle-queenside? #t)))
+    (create-move (get-square (board-squares b) src-idx) src-idx dst-idx #:is-castle-queenside? #t)))
 
 (module+ test
   (require rackunit)
