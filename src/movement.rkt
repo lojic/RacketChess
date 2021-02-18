@@ -76,27 +76,64 @@
       (printf "=~a" (piece-symbol promoted))))
   (printf "\n"))
 
-(define (move-iterator! b 
+(define (move-iterator! b
                         #:order-moves? [ order-moves? #t ]
                         #:tt-move      [ tt-move      #f ]
                         #:quiet-moves? [ quiet-moves? #t ])
-  (generate-moves! b #:quiet-moves? quiet-moves?)
-  (when order-moves?
-    (order-moves! b tt-move))
-  (let ([ tmoves (tactical-moves b) ]
-        [ thead  (tactical-head b)  ]
-        [ ti     0                  ]
-        [ qmoves (quiet-moves b)    ]
-        [ qhead  (quiet-head b)     ]
-        [ qi     0                  ])
-    (λ ()
-      (cond [ (fx<= ti thead)
+  (define do-gen #t)
+  (define qhead  #f)
+  (define qi     #f)
+  (define qmoves #f)
+  (define thead  #f)
+  (define ti     #f)
+  (define tmoves #f)
+
+  (define (gen-moves)
+    (generate-moves! b #:quiet-moves? quiet-moves?)
+    (set! qhead  (quiet-head b))
+    (set! qi     0)
+    (set! qmoves (quiet-moves b))
+    (set! thead  (tactical-head b))
+    (set! ti     0)
+    (set! tmoves (tactical-moves b)))
+
+  (define (get-tt-move)
+    (set! func get-tactical-move)
+    (if tt-move
+        tt-move
+        (begin
+          (set! tt-move 0) ; To allow comparing with fx= below
+          (get-tactical-move))))
+
+  (define (get-tactical-move)
+    (when do-gen
+      (set! do-gen #f)
+      (gen-moves)
+      (when order-moves? (order-moves! b)))
+
+    (cond [ (fx<= ti thead)
+            (let ([ m (vecref tmoves ti) ])
               (set! ti (fx+ 1 ti))
-              (fxvector-ref tmoves (sub1 ti)) ]
-            [ (fx<= qi qhead)
+              (if (fx= m tt-move)
+                  (get-tactical-move)
+                  m)) ]
+          [ else
+            (set! func get-quiet-move)
+            (get-quiet-move) ]))
+
+  (define (get-quiet-move)
+    (cond [ (fx<= qi qhead)
+            (let ([m (vecref qmoves qi) ])
               (set! qi (fx+ 1 qi))
-              (fxvector-ref qmoves (sub1 qi)) ]
-            [ else #f ]))))
+              (if (fx= m tt-move)
+                  (get-quiet-move)
+                  m)) ]
+          [ else #f]))
+
+  (define func get-tt-move)
+
+  (λ ()
+    (func)))
 
 ;; --------------------------------------------------------------------------------------------
 ;; Private Implementation
