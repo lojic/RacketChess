@@ -76,9 +76,13 @@
       (printf "=~a" (piece-symbol promoted))))
   (printf "\n"))
 
-(define (move-iterator! b #:quiet-moves? [ quiet-moves? #t ])
+(define (move-iterator! b 
+                        #:order-moves? [ order-moves? #t ]
+                        #:tt-move      [ tt-move      #f ]
+                        #:quiet-moves? [ quiet-moves? #t ])
   (generate-moves! b #:quiet-moves? quiet-moves?)
-  (order-moves! b)
+  (when order-moves?
+    (order-moves! b tt-move))
   (let ([ tmoves (tactical-moves b) ]
         [ thead  (tactical-head b)  ]
         [ ti     0                  ]

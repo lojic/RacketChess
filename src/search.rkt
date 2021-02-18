@@ -59,19 +59,19 @@
 
 (define (alpha-beta! b max-level alpha beta is-timeout?)
   (define depth (board-depth b))
-  (define tt-result (read-tt-entry (get-hash-key) (fx- max-level depth) alpha beta))
+  (define-values (tt-score tt-move) (read-tt-entry (get-hash-key) (fx- max-level depth) alpha beta))
 
-  (if (and tt-result (car tt-result))
+  (if (and tt-score tt-move)
       ;; Found a TT entry
       (if (fx= depth 0)
-          (cons (car tt-result) (cdr tt-result))
-          (car tt-result))
+          (cons tt-score tt-move)
+          tt-score)
       ;; No TT entry found
       (cond [ (is-timeout?) #f ]
             [ (fx= depth max-level)
               (quiesce! b alpha beta is-timeout?) ]
             [ else
-              (let ([ get-move (move-iterator! b) ])
+              (let ([ get-move (move-iterator! b #:tt-move tt-move) ])
                 (let loop ([ alpha alpha      ]
                            [ move  #f         ]
                            [ type  NODE-ALPHA ])

@@ -40,15 +40,15 @@
               ;; We have sufficient draft
               (let ([ score (tt-score entry) ]
                     [ type  (tt-type entry)  ])
-                (cond [ (fx= NODE-EXACT type)                          (cons score best-move) ]
-                      [ (and (fx= NODE-ALPHA type) (fx<= score alpha)) (cons alpha best-move) ]
-                      [ (and (fx= NODE-BETA type) (fx>= score beta))   (cons beta best-move)  ]
-                      [ else                                           (cons #f best-move)    ]))
+                (cond [ (fx= NODE-EXACT type)                          (values score best-move) ]
+                      [ (and (fx= NODE-ALPHA type) (fx<= score alpha)) (values alpha best-move) ]
+                      [ (and (fx= NODE-BETA type) (fx>= score beta))   (values beta best-move)  ]
+                      [ else                                           (values #f best-move)    ]))
               ;; Insufficient draft, we can't use the score, but return
               ;; best move
-              (cons #f best-move)))
+              (values #f best-move)))
         ;; Nothing found
-        #f)))
+        (values #f #f))))
 
 (define (write-tt-entry! key draft score best-move type)
   (vecset! tt-table

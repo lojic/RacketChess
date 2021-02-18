@@ -90,37 +90,17 @@
   (if (= (board-depth b) max-level)
       (begin
         (update-counts! counts m)
-        (when evaluate?
-          (evaluate b)))
-      (begin
-        (generate-moves! b)
-        (let ([ tmoves (tactical-moves b) ]
-              [ thead  (tactical-head b)  ]
-              [ qmoves (quiet-moves b)    ]
-              [ qhead  (quiet-head b)     ])
-          (let loop ([ ti 0 ][ qi 0 ])
-            (cond [ (<= ti thead)
-                    (let ([ m (vecref tmoves ti)])
-                      (make-move! b m)
-                      (if (is-legal? b m)
-                          (begin
-                            (perft! b max-level counts
-                                    #:evaluate? evaluate?
-                                    m)
-                            (unmake-move! b m))
-                          (unmake-move! b m))
-                      (loop (fx+ 1 ti) qi)) ]
-                  [ (<= qi qhead)
-                    (let ([ m (vecref qmoves qi) ])
-                      (make-move! b m)
-                      (if (is-legal? b m)
-                          (begin
-                            (perft! b max-level counts
-                                    #:evaluate? evaluate?
-                                    m)
-                            (unmake-move! b m))
-                          (unmake-move! b m))
-                      (loop ti (fx+ 1 qi))) ]))))))
+        (when evaluate? (evaluate b)))
+      (let ([ get-move (move-iterator! b #:order-moves? #f) ])
+        (let loop ([ m (get-move) ])
+          (when m
+            (make-move! b m)
+            (when (is-legal? b m)
+              (perft! b max-level counts
+                      #:evaluate? evaluate?
+                      m))
+            (unmake-move! b m)
+            (loop (get-move)))))))
 
 (module+ main
   (require "./fen.rkt")
@@ -129,7 +109,7 @@
   ;; "2kr3r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/2KR3R w - - 0 1"
   (let* ([ max-level 5 ]
          [ counts (create-zero-counts) ])
-    (time (perft! (fen->board "2kr3r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/2KR3R w - - 0 1") max-level #:evaluate? #f counts))
+    (time (perft! (fen->board) max-level #:evaluate? #f counts))
     (printf "perft(~a) results:\n" max-level)
     (printf "  Totals:     ~a\n" (counts-nodes counts))
     (printf "  Captures:   ~a\n" (counts-captures counts))
