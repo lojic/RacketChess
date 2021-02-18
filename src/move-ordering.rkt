@@ -10,7 +10,7 @@
 (provide order-moves!)
 
 ;; TODO I don't think we should call (vector-sort!) here - maybe a selection sort instead
-(define (order-moves! b tt-move)
+(define (order-moves! b)
   (define-inline (mvv-lva m)
     (let ([ victim (move-captured-piece m) ])
       (if (fx> victim 0)

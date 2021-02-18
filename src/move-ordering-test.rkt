@@ -12,7 +12,7 @@
   (let ([ b (fen->board "4k3/8/3p4/2rq1n2/2RPPB2/8/8/4K3 w - - 0 1") ])
     (define squares (board-squares b))
     (generate-moves! b)
-    (order-moves! b #f)
+    (order-moves! b)
     (let* ([ vec (vector-copy (tactical-moves b) 0 (add1 (tactical-head b))) ]
            [ c5 (pos->idx "c5") ]
            [ br (get-square squares c5) ]
