@@ -7,10 +7,28 @@
 
 (require racket/performance-hint)
 
-(provide is-legal?)
+(provide is-king-in-check?
+         is-legal?)
 
 (define east2 (+ east east))
 (define west2 (+ west west))
+
+(define (is-king-in-check? b)
+  (define squares (board-squares b))
+  (let-values ([ (white? king-idx other-king-idx own? enemy?)
+                 (if (is-whites-move? b)
+                     (values #t
+                             (white-king-idx b)
+                             (black-king-idx b)
+                             is-white?
+                             is-black?)
+                     (values #f
+                             (black-king-idx b)
+                             (white-king-idx b)
+                             is-black?
+                             is-white?)
+                     ) ])
+    (is-square-attacked? squares king-idx other-king-idx own? enemy? white?)))
 
 (define (is-legal? b m)
   (define squares (board-squares b))
