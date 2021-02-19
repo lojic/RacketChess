@@ -9,7 +9,6 @@
          "./tt.rkt")
 
 (require racket/performance-hint)
-(require debug/repl)
 
 (provide search)
 
