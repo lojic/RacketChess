@@ -82,6 +82,12 @@
         (make-human-move! b))
     secs))
 
+;; The following FEN represents a winning position for white, but it's
+;; a bit tricky to find the right move. Note - we need to set the full
+;; move count so the engine knows to use the endgame piece square
+;; table for the king !
+;; "8/k7/3p4/PK1P1p2/3P1P2/8/8/8 w - - 0 100"
+
 (module+ main
   (let ([ computer-plays-black?
           (let loop ()
@@ -90,4 +96,4 @@
               (cond [ (string=? player "w") #f ]
                     [ (string=? player "b") #t ]
                     [ else (loop) ]))) ])
-    (game 20 computer-plays-black? 5)))
+    (game 50 computer-plays-black? 5)))
