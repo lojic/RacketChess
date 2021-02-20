@@ -6,6 +6,8 @@ To play, `cd` to the `RacketChess/src` directory and run `rlwrap racket chess.rk
 The engine currently has:
 
 * alpha beta pruning
+* quiescence search
+* iterative deepening
 * piece square table
 * simple MVV-LVA move ordering
 * transposition table
