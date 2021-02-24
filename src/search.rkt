@@ -6,6 +6,7 @@
          "./legality.rkt"
          "./make-move.rkt"
          "./movement.rkt"
+         "./stats.rkt"
          "./tt.rkt")
 
 (require racket/performance-hint)
@@ -15,37 +16,17 @@
 (define MIN-SCORE -100000)
 (define MAX-SCORE 100000)
 
-(define think-seconds #f)
-(define start-seconds #f)
-(define num-nodes 0)
-
-(define (init-timer! seconds)
-  (set! think-seconds seconds)
-  (set! start-seconds (current-seconds))
-  (set! num-nodes 0))
-
-(define-inline (is-timeout?)
-  (set! num-nodes (fx+ 1 num-nodes))
-
-  (if (fx= 0 (fxand num-nodes #b11111111111))
-      (let ([ elapsed-seconds (- (current-seconds) start-seconds) ])
-        (if (> elapsed-seconds think-seconds)
-            (begin
-              (printf "~a nodes per second\n" (exact->inexact (/ num-nodes elapsed-seconds)))
-              #t)
-            #f))
-      #f))
-
 (define (search b max-level seconds)
-  (init-timer! seconds)
+  (define stats-obj (create-stats))
+  (init-timer! stats-obj seconds)
 
   (let loop ([ level 1 ][ best #f ])
     (if (or (fx> level max-level)
-            (is-timeout?))
+            (timeout? stats-obj))
         best
         (begin
           (set-board-depth! b 0)
-          (let ([ result (alpha-beta! b level MIN-SCORE MAX-SCORE is-timeout?) ])
+          (let ([ result (alpha-beta! b level stats-obj MIN-SCORE MAX-SCORE) ])
             (if result
                 (let ([ score (car result) ]
                       [ m     (cdr result) ])
@@ -57,19 +38,24 @@
                       best))
                 best))))))
 
-(define (alpha-beta! b max-level alpha beta is-timeout?)
+(define (alpha-beta! b max-level stats-obj alpha beta)
+  (increment-nodes! stats-obj)
   (define depth (board-depth b))
   (define-values (tt-score tt-move) (read-tt-entry (get-hash-key) (fx- max-level depth) alpha beta))
 
+  (when tt-move (increment-tt-moves! stats-obj))
+
   (if (and tt-score tt-move)
       ;; Found a TT entry
-      (if (fx= depth 0)
-          (cons tt-score tt-move)
-          tt-score)
+      (begin
+        (increment-tt-hits! stats-obj)
+        (if (fx= depth 0)
+            (cons tt-score tt-move)
+            tt-score))
       ;; No TT entry found
-      (cond [ (is-timeout?) #f ]
+      (cond [ (timeout? stats-obj) #f ]
             [ (fx= depth max-level)
-              (quiesce! b alpha beta is-timeout?) ]
+              (quiesce! b stats-obj alpha beta) ]
             [ else
               (let ([ get-move (move-iterator! b #:tt-move tt-move) ])
                 (let loop ([ legal-move? #f         ]
@@ -97,7 +83,7 @@
                           (make-move! b m)
                           (if (is-legal? b m)
                               ;; Legal move, continue
-                              (let* ([ result (alpha-beta! b max-level (fx- beta) (fx- alpha) is-timeout?) ]
+                              (let* ([ result (alpha-beta! b max-level stats-obj (fx- beta) (fx- alpha)) ]
                                      [ score  (and result (fx- result)) ])
                                 (unmake-move! b m)
                                 (cond [ (not score)
@@ -114,12 +100,12 @@
                                 (unmake-move! b m)
                                 (loop legal-move? alpha move type)))))))) ])))
 
-(define (quiesce! b alpha beta is-timeout?)
+(define (quiesce! b stats-obj alpha beta)
   (define stand-pat (evaluate b))
   (define depth     (board-depth b))
   (define get-move  (move-iterator! b #:quiet-moves? #f))
 
-  (cond [ (is-timeout?) #f ]
+  (cond [ (timeout? stats-obj) #f ]
         [ else
           (if (fx>= stand-pat beta)
               beta
@@ -132,7 +118,7 @@
                         (make-move! b m)
                         (if (is-legal? b m)
                             ;; Legal move, continue
-                            (let* ([ result (quiesce! b (fx- beta) (fx- alpha) is-timeout?) ]
+                            (let* ([ result (quiesce! b stats-obj (fx- beta) (fx- alpha)) ]
                                    [ score  (and result (fx- result)) ])
                               (unmake-move! b m)
                               (cond [ (not score)     #f           ]
