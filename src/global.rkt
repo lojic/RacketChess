@@ -25,6 +25,7 @@
   (provide fx*
            fx+
            fx-
+           fx<
            fx<=
            fx=
            fx>
@@ -47,6 +48,7 @@
   (define-syntax-rule (fx* a ...)  (unsafe-fx* a ...))
   (define-syntax-rule (fx+ a ...)  (unsafe-fx+ a ...))
   (define-syntax-rule (fx- a ...)  (unsafe-fx- a ...))
+  (define-syntax-rule (fx< a ...) (unsafe-fx< a ...))
   (define-syntax-rule (fx<= a ...) (unsafe-fx<= a ...))
   (define-syntax-rule (fx= a ...)  (unsafe-fx= a ...))
   (define-syntax-rule (fx> a ...)  (unsafe-fx> a ...))
