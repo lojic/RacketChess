@@ -87,6 +87,10 @@
 ;; move count so the engine knows to use the endgame piece square
 ;; table for the king !
 ;; "8/k7/3p4/PK1P1p2/3P1P2/8/8/8 w - - 0 100"
+;;
+;; The following causes the engine to play stupidly w/ TT enabled ?!?!
+;; "8/8/8/8/2K5/5Q2/6PP/4k3 w - - 0 100"
+;; "8/8/8/8/2K5/5Q2/8/4k3 w - - 0 100"
 
 (module+ main
   (let ([ computer-plays-black?

@@ -30,7 +30,7 @@
 (define-inline (hash-index zobrist-key)
   (fxand zobrist-key HASH-MASK))
 
-;; Returns (cons score move) or #f if no matching entry found
+;; Returns (values score move). If no matching entry found, both score and move are #f
 (define (read-tt-entry key draft alpha beta)
   (let ([ entry (vecref tt-table (hash-index key)) ])
     (if (and entry (fx= key (tt-zobrist-key entry)))
