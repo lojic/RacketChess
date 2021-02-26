@@ -168,15 +168,18 @@
 
 (define (generate-offset-moves! b idx piece offsets quiet-moves?)
   (let ([ squares (board-squares b) ])
-    (for ([ offset (in-list offsets) ])
-      (let* ([ target-idx (fx+ idx offset)                ]
-             [ target     (get-square squares target-idx) ])
-        (cond [ (fx= target empty-square)
-                (when quiet-moves?
-                  (add-quiet-move! b (create-move piece idx target-idx))) ]
-              [ (is-other-piece? piece target)
-                (add-tactical-move! b
-                                   (create-move piece idx target-idx #:captured-piece target)) ])))))
+    (let loop ([ lst offsets ])
+      (when (not (null? lst))
+        (let* ([ offset     (car lst)                       ]
+               [ target-idx (fx+ idx offset)                ]
+               [ target     (get-square squares target-idx) ])
+          (cond [ (fx= target empty-square)
+                  (when quiet-moves?
+                    (add-quiet-move! b (create-move piece idx target-idx))) ]
+                [ (is-other-piece? piece target)
+                  (add-tactical-move! b
+                                      (create-move piece idx target-idx #:captured-piece target)) ]))
+        (loop (cdr lst))))))
 
 (define (generate-pawn-moves! b idx piece #:quiet-moves? [ quiet-moves? #t ])
   (let-values ([ (white? n1-idx n2-idx nw-idx w-idx ne-idx e-idx min8th max8th min2nd max2nd)
