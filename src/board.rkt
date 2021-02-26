@@ -54,7 +54,7 @@
                squares
                move-i
                game-state
-               game-stack
+               game-stack     ; Indexed by move-i
                quiet-moves    ; Indexed by depth
                quiet-head     ; Indexed by depth
                tactical-moves ; Indexed by depth
