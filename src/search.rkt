@@ -10,10 +10,10 @@
          "./tt.rkt")
 
 (require racket/performance-hint)
-(require debug/repl)
 
 (provide search)
 
+;; Iterative deepening
 (define (search b max-level seconds)
   (define stats-obj (create-stats))
   (init-timer! stats-obj seconds)
@@ -33,7 +33,13 @@
                       [ m     (cdr result) ])
                   (if m
                       (begin
-                        (printf "Best move (~a) [~a] " level (~r (/ score 100) #:precision 2))
+                        (printf "Best move (~a) (~a) [~a] "
+                                level
+                                (~r (exact->inexact
+                                     (- (current-inexact-milliseconds)
+                                        (stats-start-milliseconds stats-obj)))
+                                    #:precision 1)
+                                (~r (/ score 100) #:precision 2))
                         (print-move m)
                         (loop (fx+ 1 level) (cons score m)))
                       (begin
@@ -43,7 +49,7 @@
                   (print-stats stats-obj)
                   best)))))))
 
-(define-inline (search-move get-move main-loop stats-obj depth max-level b m alpha beta best-move type legal-move?)
+(define (search-move get-move main-loop stats-obj depth max-level b m alpha beta best-move type legal-move?)
   (make-move! b m)
   (cond [ (is-legal? b m)
           ;; Legal move, continue
@@ -155,6 +161,7 @@
   (increment-quiesce-nodes! stats-obj)
   (define stand-pat (evaluate b))
   (define depth     (board-depth b))
+  (set-stats-seldepth! stats-obj depth)
   (define get-move  (move-iterator! b #:quiet-moves? #f))
 
   (cond [ (timeout? stats-obj) #f ]
