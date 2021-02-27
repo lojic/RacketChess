@@ -19,7 +19,8 @@
 (struct stats (beta-cuts
                nodes
                quiesce-nodes
-               start-seconds
+               seldepth
+               start-milliseconds
                think-seconds
                tt-hits
                tt-misses
@@ -28,7 +29,7 @@
         #:mutable)
 
 (define (create-stats)
-  (stats 0 0 0 0 0 0 0 0))
+  (stats 0 0 0 0 0 0 0 0 0))
 
 (define-inline (increment-beta-cuts! obj)
   (set-stats-beta-cuts! obj (fx+ 1 (stats-beta-cuts obj))))
@@ -50,36 +51,48 @@
 
 (define (init-timer! obj seconds)
   (set-stats-think-seconds! obj seconds)
-  (set-stats-start-seconds! obj (current-seconds)))
+  (set-stats-start-milliseconds! obj (current-inexact-milliseconds)))
 
 (define (print-stats obj)
   (define (format-integer n)
     (number->delimited n #:include-fraction? #f))
 
-  (let* ([ elapsed-seconds (exact->inexact
-                            (fx- (current-seconds)
-                                 (stats-start-seconds obj))) ]
-         [ nodes           (stats-nodes obj)                ]
-         [ qnodes          (stats-quiesce-nodes obj)        ]
-         [ beta-cuts       (stats-beta-cuts obj)            ]
-         [ total-nodes     (+ nodes qnodes)                 ]
-         [ tt-hits         (stats-tt-hits obj)              ]
-         [ tt-misses       (stats-tt-misses obj)            ]
-         [ tt-reads        (+ tt-hits tt-misses)            ]
-         [ tt-moves        (stats-tt-moves obj)             ])
+  (let* ([ elapsed-ms (- (current-inexact-milliseconds)
+                         (stats-start-milliseconds obj)) ]
+         [ nodes           (stats-nodes obj)             ]
+         [ qnodes          (stats-quiesce-nodes obj)     ]
+         [ seldepth        (stats-seldepth obj)          ]
+         [ beta-cuts       (stats-beta-cuts obj)         ]
+         [ total-nodes     (+ nodes qnodes)              ]
+         [ tt-hits         (stats-tt-hits obj)           ]
+         [ tt-misses       (stats-tt-misses obj)         ]
+         [ tt-reads        (+ tt-hits tt-misses)         ]
+         [ tt-moves        (stats-tt-moves obj)          ])
     (printf "\n")
-    (printf "Time        = ~a\n" elapsed-seconds)
+    (printf "Time        = ~a\n" (~r elapsed-ms #:precision 1))
     (printf "Nodes       = ~a\n" (format-integer nodes))
     (printf "Q Nodes     = ~a\n" (format-integer qnodes))
+    (printf "Seldepth    = ~a\n" (stats-seldepth obj))
     (printf "Total Nodes = ~a\n" (format-integer total-nodes))
     (printf "TT Hits     = ~a (~a %)\n" (format-integer tt-hits) (~r (* 100.0 (/ tt-hits tt-reads)) #:precision 2))
     (printf "TT Misses   = ~a\n" (format-integer tt-misses))
     (printf "TT Moves    = ~a\n" (format-integer tt-moves))
     (printf "Beta cuts   = ~a\n" (format-integer beta-cuts))
-    (printf "Nodes/sec   = ~a\n" (number->delimited (/ total-nodes elapsed-seconds)))))
+    (printf "Nodes/sec   = ~a\n" (number->delimited (/ total-nodes (/ elapsed-ms 1000))))))
 
 (define-inline (timeout? obj)
   (if (fx= 0 (fxand (stats-nodes obj) #b1111111111111))
-      (let ([ elapsed-seconds (fx- (current-seconds) (stats-start-seconds obj)) ])
-        (fx>= elapsed-seconds (stats-think-seconds obj)))
+      (let* ([ elapsed-ms (- (current-inexact-milliseconds) (stats-start-milliseconds obj)) ]
+             [ elapsed-seconds (/ elapsed-ms 1000) ])
+        (>= elapsed-seconds (stats-think-seconds obj)))
       #f))
+
+(module+ main
+  (define (run)
+    (let loop ([ n 100000000 ])
+      (let ([ t (current-inexact-milliseconds) ])
+        (when (and (fx> n 0)
+                   (fx> t 100))
+          (loop (fx- n 1))))))
+
+  (time (run)))
