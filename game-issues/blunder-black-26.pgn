@@ -1,0 +1,5 @@
+{ computer was playing black against me - Stockfish says Black move 26 was a blunder }
+{ FEN before black move = 2k2r1r/1p3bpp/p2b1p1n/2p2P2/2P3P1/P1K1PN1P/1B1N4/3RR3 b - - 0 1 }
+{ FEN after black move = 2k2r1r/1p3bpp/p4p1n/2p1bP2/2P3P1/P1K1PN1P/1B1N4/3RR3 w - - 0 1 }
+
+1. d4 d5 2. Nf3 Nc6 3. e3 Be6 4. Bd3 Qd7 5. a3 O-O-O 6. Nbd2 Nh6 7. h3 Re8 8. b3 f6 9. Bb2 Rd8 10. Qe2 Qe8 11. O-O-O Bf7 12. g4 e5 13. Bb5 exd4 14. Bxc6 Qxc6 15. Nxd4 Qb6 16. Qb5 Qxb5 17. Nxb5 a6 18. Nd4 Re8 19. Rhe1 Bg6 20. f4 c5 21. N4f3 Be7 22. f5 Bf7 23. c4 dxc4 24. bxc4 Bd6 25. Kc2 Ref8 26. Kc3 Be5+ 27. Nxe5 fxe5 28. Ne4 Rd8 29. Nxc5 Rxd1 30. Rxd1 Re8 31. e4 Re7 32. a4 Rc7 33. Ne6 Bxe6 34. fxe6 b5 35. axb5 axb5 36. c5 Rxc5+ 37. Kb4 Rc7 38. Rd5 Re7 39. Rxe5 Kd8 40. Rd5+ Ke8 41. Rd6 Rc7 42. Kxb5 Ke7 43. Ba3 Ke8 44. Ra6 Rc8 45. Ra7 Rd8 46. Rxg7 Rb8+ 47. Kc6 Rc8+ 48. Kd5 Ra8 49. Bc5 Rd8+ 50. Ke5 Rd3 51. Rxh7 Kd8 52. Rxh6 Kc8 53. Rh7 Rd8 54. g5 Kb8 55. g6 Rg8 56. Kf6 Kc8 57. g7 Kc7 58. Rh8 Rxg7 59. Kxg7 Kc6 60. e7 Kxc5 61. e8=Q Kd4 62. Qc6 Ke3 63. Rf8 Kd3 64. Rf3+ Kd2 65. Qc3+ Ke2 66. Qd3+ Ke1 67. Rf1# 
