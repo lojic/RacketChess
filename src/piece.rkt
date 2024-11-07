@@ -12,7 +12,6 @@
          is-black?
          is-king?
          is-knight?
-         is-other-color?
          is-other-piece?
          is-own-piece?
          is-pawn?
@@ -32,7 +31,7 @@
          white-queen
          white-rook)
 
-(require racket/fixnum
+(require "./global.rkt"
          racket/performance-hint)
 
 ;; --------------------------------------------------------------------------------------------
@@ -102,7 +101,8 @@
 
 ;; hash with key = piece & value = symbol
 (define piece-symbols
-  (for/hash ([ pair (in-list piece-symbol-alist) ])
+  (for/hash ([ pair (in-list (cons (cons empty-square " ")
+                                   piece-symbol-alist)) ])
     (values (car pair) (cdr pair))))
 
 ;; hash with key = symbol & value = piece
@@ -130,20 +130,18 @@
 (define-inline (is-knight? piece)
   (fx= (fxand piece piece-type-bits) knight-bits))
 
+;; A major piece is any piece other than a pawn
 (define-inline (is-major? piece)
   (fx> (fxand piece piece-type-bits)
-       1))
+       pawn-bits))
 
-(define-inline (is-other-color? p1 p2)
-  (fx= (fxior (fxand p1 color-bits)
-              (fxand p2 color-bits))
-       color-bits))
-
+;; Is other a different color than mine?
 (define-inline (is-other-piece? mine other)
   (fx= (fxand (fxxor mine other)
               color-bits)
        color-bits))
 
+;; Is other the same color as mine?
 (define-inline (is-own-piece? mine other)
   (fx= (fxand (fxxor mine other)
               color-bits)
@@ -153,12 +151,16 @@
   (fx= (fxand piece piece-type-bits)
        pawn-bits))
 
+;; Is this a piece vs. an empty square?
 (define-inline (is-piece? piece)
   (fx> (fxand piece piece-type-bits) #b0))
 
 (define-inline (is-queen? piece)
   (fx= (fxand piece piece-type-bits) queen-bits))
 
+;; Indicate whether the piece is either:
+;; white if is-white? is true, or
+;; black if is-white? is false
 (define-inline (is-right-color-piece? piece is-white?)
   (fx> (fxand piece (if is-white? white-bit black-bit)) #b0))
 
@@ -280,14 +282,6 @@
 
   (check-false (is-black-king? black-bishop))
   (check-false (is-white-king? white-queen))
-
-  ;; is-other-color?
-
-  (check-not-false (is-other-color? black-pawn white-rook))
-  (check-not-false (is-other-color? white-pawn black-rook))
-
-  (check-false (is-other-color? black-pawn black-bishop))
-  (check-false (is-other-color? white-rook white-king))
 
   ;; is-other-piece?
 
