@@ -25,19 +25,19 @@
 ;; 10x12 Mailbox Board Representation
 ;; Index of upper left is 0. Index of lower right is 119
 ;;
-;; FF FF FF FF FF FF FF FF FF FF | FF  FF  FF  FF  FF  FF  FF  FF  FF FF
-;; FF FF FF FF FF FF FF FF FF FF | FF  FF  FF  FF  FF  FF  FF  FF  FF FF
-;; FF 44 42 43 45 46 43 42 44 FF | FF  21  22  23  24  25  26  27  28 FF 8
-;; FF 41 41 41 41 41 41 41 41 FF | FF  31  32  33  34  35  36  37  38 FF 7
-;; FF 00 00 00 00 00 00 00 00 FF | FF  41  42  43  44  45  46  47  48 FF 6
-;; FF 00 00 00 00 00 00 00 00 FF | FF  51  52  53  54  55  56  57  58 FF 5
-;; FF 00 00 00 00 00 00 00 00 FF | FF  61  62  63  64  65  66  67  68 FF 4
-;; FF 00 00 00 00 00 00 00 00 FF | FF  71  72  73  74  75  76  77  78 FF 3
-;; FF 81 81 81 81 81 81 81 81 FF | FF  81  82  83  84  85  86  87  88 FF 2
-;; FF 84 82 83 85 88 83 82 84 FF | FF  91  92  93  94  95  96  97  98 FF 1
-;; FF FF FF FF FF FF FF FF FF FF | FF  FF  FF  FF  FF  FF  FF  FF  FF FF
-;; FF FF FF FF FF FF FF FF FF FF | FF  FF  FF  FF  FF  FF  FF  FF  FF FF
-;;                                      a   b   c   d   e   f   g   h
+;; FF  FF  FF  FF  FF  FF  FF  FF  FF FF
+;; FF  FF  FF  FF  FF  FF  FF  FF  FF FF
+;; FF  21  22  23  24  25  26  27  28 FF 8
+;; FF  31  32  33  34  35  36  37  38 FF 7
+;; FF  41  42  43  44  45  46  47  48 FF 6
+;; FF  51  52  53  54  55  56  57  58 FF 5
+;; FF  61  62  63  64  65  66  67  68 FF 4
+;; FF  71  72  73  74  75  76  77  78 FF 3
+;; FF  81  82  83  84  85  86  87  88 FF 2
+;; FF  91  92  93  94  95  96  97  98 FF 1
+;; FF  FF  FF  FF  FF  FF  FF  FF  FF FF
+;; FF  FF  FF  FF  FF  FF  FF  FF  FF FF
+;;      a   b   c   d   e   f   g   h
 
 (define empty-board
   (bytes->immutable-bytes
