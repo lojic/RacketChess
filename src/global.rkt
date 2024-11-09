@@ -9,7 +9,8 @@
   )
 
 #;(begin
-  (require racket/unsafe/ops)
+  (require (only-in racket/fixnum make-fxvector)
+           racket/unsafe/ops)
   (define-syntax-rule (fx* a ...)             (unsafe-fx* a ...))
   (define-syntax-rule (fx+ a ...)             (unsafe-fx+ a ...))
   (define-syntax-rule (fx- a ...)             (unsafe-fx- a ...))
@@ -49,6 +50,7 @@
          fxvector-set!
          fxxor
          get-byte
-         set-byte!)
-
-
+         make-fxvector
+         set-byte!
+         vecref
+         vecset!)
