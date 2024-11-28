@@ -1,6 +1,7 @@
 #lang racket
 
-(provide black-bishop
+(provide bishop-piece
+         black-bishop
          black-king
          black-knight
          black-pawn
@@ -21,8 +22,13 @@
          is-rook?
          is-white-king?
          is-white?
+         king-piece
+         knight-piece
+         pawn-piece
          piece-symbol
          piece-type
+         queen-piece
+         rook-piece
          symbol-piece
          white-bishop
          white-king
@@ -61,12 +67,12 @@
 ;; --------------------------------------------------------------------------------------------
 
 ;; Piece types
-(define pawn-bits   #b001)
-(define knight-bits #b010)
-(define bishop-bits #b011)
-(define rook-bits   #b100)
-(define queen-bits  #b101)
-(define king-bits   #b110)
+(define pawn-piece   #b001)
+(define knight-piece #b010)
+(define bishop-piece #b011)
+(define rook-piece   #b100)
+(define queen-piece  #b101)
+(define king-piece   #b110)
 
 ;; White pieces
 (define white-pawn   #b00010001)
@@ -115,7 +121,7 @@
 ;; --------------------------------------------------------------------------------------------
 
 (define-inline (is-bishop? piece)
-  (fx= (fxand piece piece-type-bits) bishop-bits))
+  (fx= (fxand piece piece-type-bits) bishop-piece))
 
 (define-inline (is-black? piece)
   (fx> (fxand piece black-bit) #b0))
@@ -125,15 +131,15 @@
        (is-king? piece)))
 
 (define-inline (is-king? piece)
-  (fx= (fxand piece piece-type-bits) king-bits))
+  (fx= (fxand piece piece-type-bits) king-piece))
 
 (define-inline (is-knight? piece)
-  (fx= (fxand piece piece-type-bits) knight-bits))
+  (fx= (fxand piece piece-type-bits) knight-piece))
 
 ;; A major piece is any piece other than a pawn
 (define-inline (is-major? piece)
   (fx> (fxand piece piece-type-bits)
-       pawn-bits))
+       pawn-piece))
 
 ;; Is other a different color than mine?
 (define-inline (is-other-piece? mine other)
@@ -149,14 +155,14 @@
 
 (define-inline (is-pawn? piece)
   (fx= (fxand piece piece-type-bits)
-       pawn-bits))
+       pawn-piece))
 
 ;; Is this a piece vs. an empty square?
 (define-inline (is-piece? piece)
   (fx> (fxand piece piece-type-bits) #b0))
 
 (define-inline (is-queen? piece)
-  (fx= (fxand piece piece-type-bits) queen-bits))
+  (fx= (fxand piece piece-type-bits) queen-piece))
 
 ;; Indicate whether the piece is either:
 ;; white if is-white? is true, or
@@ -165,7 +171,7 @@
   (fx> (fxand piece (if is-white? white-bit black-bit)) #b0))
 
 (define-inline (is-rook? piece)
-  (fx= (fxand piece piece-type-bits) rook-bits))
+  (fx= (fxand piece piece-type-bits) rook-piece))
 
 (define-inline (is-white? piece)
   (fx> (fxand piece white-bit) #b0))
