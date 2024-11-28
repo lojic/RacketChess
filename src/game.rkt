@@ -1,17 +1,28 @@
 #lang racket
 
-(provide create-game
+(provide black-king-idx
+         create-game
+         get-ep-idx
          init-moves!
+         is-whites-move?
+         may-castle?
          push-quiet-move!
          push-tactical-move!
          quiet-length
          quiet-moves
          reset-game-depth!
+         set-black-king-idx!
+         set-ep-idx!
+         set-white-king-idx!
+         set-whites-move?!
          tactical-length
-         tactical-moves)
+         tactical-moves
+         white-king-idx
+         (struct-out game))
 
 (require "./global.rkt"
          "./board.rkt"
+         "./state.rkt"
          racket/performance-hint)
 
 ;; --------------------------------------------------------------------------------------------
@@ -19,6 +30,7 @@
 ;; --------------------------------------------------------------------------------------------
 ;; board           : The 10 x 12 mailbox representation of a chess board
 ;; depth           : The current depth of the search tree
+;; state           : A fixnum-fields representing game state
 ;; quiet-length    : An fxvector (indexed by depth) containing lengths of quiet-moves vectors
 ;; quiet-moves     : A vector (indexed by depth) of fxvectors containing quiet moves
 ;; tactical-length : An fxvector (indexed by depth) containing the lengths of tactical-moves vectors
@@ -26,6 +38,7 @@
 
 (struct game (board
               depth
+              state
               quiet-length    ; Indexed by depth
               quiet-moves     ; Indexed by depth
               tactical-length ; Indexed by depth
@@ -38,6 +51,7 @@
 (define (create-game)
   (let ([ g (game (blank-board)                    ; board
                   0                                ; depth
+                  (initial-game-state)             ; state
                   (make-fxvector max-game-depth)   ; quiet-length
                   (make-vector max-game-depth)     ; quiet-moves
                   (make-fxvector max-game-depth)   ; tactical-length
@@ -101,6 +115,50 @@
 ;; Return the tactical moves vector for the current depth
 (define-inline (tactical-moves g)
   (vecref (game-tactical-moves g) (game-depth g)))
+
+;; --------------------------------------------------------------------------------------------
+;; Convenience functions for getting/setting state fields via the game
+;; module When multiple fields need to be manipulated, it may be more
+;; efficient to obtain the state fixnum, and then make multiple calls.
+;; --------------------------------------------------------------------------------------------
+
+(define-inline (black-king-idx g)
+  (state-black-king-idx (game-state g)))
+
+(define-inline (get-ep-idx g)
+  (state-ep-idx (game-state g)))
+
+(define-inline (is-whites-move? g)
+  (state-whites-move? (game-state g)))
+
+(define-inline (may-castle? g white?)
+  (let ([ s (game-state g) ])
+    (if white?
+        (or (state-w-kingside-ok? s) (state-w-queenside-ok? s))
+        (or (state-b-kingside-ok? s) (state-b-queenside-ok? s)))))
+
+(define-inline (set-black-king-idx! g idx)
+  (set-game-state!
+   g
+   (update-state-black-king-idx (game-state g) idx)))
+
+(define-inline (set-ep-idx! g v)
+  (set-game-state! g (update-state-ep-idx (game-state g) v)))
+
+(define-inline (set-white-king-idx! g idx)
+  (set-game-state!
+   g
+   (update-state-white-king-idx (game-state g) idx)))
+
+(define-inline (set-whites-move?! g bool)
+  (set-game-state!
+   g
+   (if bool
+       (set-state-whites-move? (game-state g))
+       (unset-state-whites-move? (game-state g)))))
+
+(define-inline (white-king-idx g)
+  (state-white-king-idx (game-state g)))
 
 ;; --------------------------------------------------------------------------------------------
 ;; Tests
