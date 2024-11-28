@@ -1,8 +1,12 @@
 #lang racket
 
-(provide create-move)
+(provide create-move
+         print-move)
 
 (require "./fixnum-fields.rkt"
+         "./piece.rkt"
+         "./board.rkt"
+         "./global.rkt"
          racket/performance-hint)
 
 (fixnum-fields move ([ src                 5        ]
@@ -30,3 +34,16 @@
              (if is-castle-queenside? 1 0)
              (if is-castle-kingside?  1 0)
              (if is-ep-capture?       1 0)))
+
+(define (print-move m)
+  (printf "~a~a~a~a"
+          (piece-symbol (move-src m))
+          (idx->pos (move-src-idx m))
+          (if (fx> (move-captured-piece m) 0)
+              "x"
+              "-")
+          (idx->pos (move-dst-idx m)))
+  (let ([ promoted (move-promoted-piece m) ])
+    (when (fx> promoted 0)
+      (printf "=~a" (piece-symbol promoted))))
+  (printf "\n"))
