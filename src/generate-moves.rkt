@@ -89,8 +89,8 @@
 
   (let loop ([ lst offsets ])
     (when (not (null? lst))
-      (let* ([ offset     (car lst)                       ]
-             [ target-idx (fx+ idx offset)                ]
+      (let* ([ offset     (car lst)                     ]
+             [ target-idx (fx+ idx offset)              ]
              [ target     (get-square board target-idx) ])
         (cond [ (fx= target empty-square)
                 (when quiet-moves?
